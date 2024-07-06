@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { authUser, getDemoSignMessage, updateUser, updateUserAccess } from "../controller/userControllers";
+import { authUser, getDemoSignMessage, updateUser, updateUserAccess } from "../controller/userController";
 import { adminOnly, protect, signatureVerificationMiddleware } from "../middleware/authMiddleware";
 
 const userRouter = Router();
