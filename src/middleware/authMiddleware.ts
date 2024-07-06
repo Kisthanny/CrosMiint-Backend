@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import { verify, JwtPayload } from "jsonwebtoken";
-import User, { IUser } from "../models/userModel"; // 确保路径正确
+import User, { IUser, Role } from "../models/userModel"; // 确保路径正确
 import expressAsyncHandler from "express-async-handler";
 import { ethers } from "ethers";
 
@@ -66,5 +66,14 @@ export const signatureVerificationMiddleware = expressAsyncHandler(async (req: V
         // 签名验证失败，返回错误响应
         console.error("Signature verification failed:", error);
         res.status(401).json({ error: "Unauthorized" });
+    }
+})
+
+export const adminOnly = expressAsyncHandler(async (req: ValidatedRequest, res, next) => {
+    const role = req.user?.role;
+    if (role !== Role.Admin) {
+        res.status(401).json({ error: 'Access Denied' })
+    } else {
+        next();
     }
 })

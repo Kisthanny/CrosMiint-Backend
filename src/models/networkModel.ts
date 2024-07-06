@@ -18,7 +18,7 @@ export interface INetwork extends Document {
 // 创建 networkSchema
 const networkSchema: Schema<INetwork> = new mongoose.Schema(
     {
-        networkId: { type: Number, required: true },
+        networkId: { type: Number, required: true, unique: true },
         chainName: { type: String, required: true },
         chainId: { type: String, required: true },
         gateway: { type: String, required: true },

@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 import { connectDB } from "./config/db";
 import userRouter from "./router/userRouter";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler";
+import networkRouter from "./router/networkRouter";
 
 dotenv.config();
 
@@ -29,6 +30,7 @@ app.get("/", (req, res) => {
 
 // use router
 app.use("/api/user", userRouter);
+app.use("/api/network", networkRouter);
 
 // error handle
 app.use(notFoundHandler);

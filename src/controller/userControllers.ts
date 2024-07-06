@@ -1,5 +1,5 @@
 import expressAsyncHandler from "express-async-handler";
-import User from "../models/userModel";
+import User, { Role } from "../models/userModel";
 import { ValidatedRequest } from "../middleware/authMiddleware";
 import { generateToken } from "../config/generateToken";
 import { ethers } from "ethers";
@@ -26,7 +26,7 @@ const findOrCreateUser = async (rawAddress: string) => {
 }
 
 export const getDemoSignMessage = expressAsyncHandler(async (req, res) => {
-    const privateKey = process.env.PRIVATE_DEMO!;
+    const { privateKey } = req.params;
     const wallet = new ethers.Wallet(privateKey);
 
     const message = process.env.SIGN_MESSAGE!;
@@ -53,9 +53,16 @@ export const authUser = expressAsyncHandler(async (req: ValidatedRequest, res) =
 
     const user = await findOrCreateUser(address);
 
+    const cleanUser = user.toObject({
+        versionKey: false,
+        transform: function (doc, ret) {
+            delete ret._id;
+            return ret;
+        }
+    })
+
     res.status(201).json({
-        _id: user._id,
-        address: user.address,
+        ...cleanUser,
         token: generateToken(String(user._id)),
     });
 });
@@ -68,7 +75,6 @@ export const updateUser = expressAsyncHandler(async (req: ValidatedRequest, res)
         throw new Error("missing argument");
     }
 
-    // const user = await findOrCreateUser(address);
     const user = req.user;
     if (!user) {
         res.status(400);
@@ -86,10 +92,32 @@ export const updateUser = expressAsyncHandler(async (req: ValidatedRequest, res)
     const updatedUser = await user.save();
 
     res.status(200).json(updatedUser.toObject({
-        versionKey: false,  // 去掉 __v 字段
+        versionKey: false,
         transform: function (doc, ret) {
-            delete ret._id; // 如果不需要 _id 字段，可以删除
+            delete ret._id;
             return ret;
         }
     }));
 });
+
+export const updateUserAccess = expressAsyncHandler(async (req, res) => {
+    const { address, role } = req.body;
+
+    if (!address || !role) {
+        res.status(400);
+        throw new Error("missing argument");
+    }
+    if (!Object.values(Role).includes(role)) {
+        res.status(400);
+        throw new Error(`no such role: ${role}`);
+    }
+
+    const user = await findOrCreateUser(address);
+    user.role = role;
+    const updatedUser = await user.save();
+
+    res.status(200).json({
+        address: updatedUser.address,
+        role: updatedUser.role,
+    });
+})

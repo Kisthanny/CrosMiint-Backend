@@ -18,8 +18,7 @@ export const errorHandler = (err: Error, req: Request, res: Response, next: Next
     const response: ErrorResponse = {
         message: err.message,
     };
-
-    console.log('NODE_ENV', process.env.NODE_ENV)
+    
     if (process.env.NODE_ENV === 'development') {
         response.stack = err.stack;
     }
