@@ -5,6 +5,7 @@ import { connectDB } from "./config/db";
 import userRouter from "./router/userRouter";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler";
 import networkRouter from "./router/networkRouter";
+import collectionRouter from "./router/collectionRouter";
 
 dotenv.config();
 
@@ -31,6 +32,7 @@ app.get("/", (req, res) => {
 // use router
 app.use("/api/user", userRouter);
 app.use("/api/network", networkRouter);
+app.use("/api/collection", collectionRouter);
 
 // error handle
 app.use(notFoundHandler);

@@ -1,5 +1,6 @@
 import expressAsyncHandler from "express-async-handler";
 import Network from "../models/networkModel";
+import { formatDocument } from "../util/responseFormatter";
 
 export const createNetwork = expressAsyncHandler(async (req, res) => {
     const { networkId, chainName, chainId, gateway, nativeCurrency, blockExplorerUrls = [] } = req.body;
@@ -23,25 +24,13 @@ export const createNetwork = expressAsyncHandler(async (req, res) => {
         blockExplorerUrls
     })
 
-    res.status(201).json(newNetwork.toObject({
-        versionKey: false,
-        transform: function (doc, ret) {
-            delete ret._id;
-            return ret;
-        }
-    }));
+    res.status(201).json(formatDocument(newNetwork));
 })
 
 export const getNetworks = expressAsyncHandler(async (req, res) => {
     const networks = await Network.find()
 
-    const cleanNetworks = networks.map(network => network.toObject({
-        versionKey: false,
-        transform: function (doc, ret) {
-            delete ret._id;
-            return ret;
-        }
-    }))
+    const cleanNetworks = networks.map(network => formatDocument(network))
 
     res.status(200).json(cleanNetworks)
 })
@@ -73,13 +62,7 @@ export const updateNetwork = expressAsyncHandler(async (req, res) => {
 
     const updatedNetwork = await network.save();
 
-    res.status(200).json(updatedNetwork.toObject({
-        versionKey: false,
-        transform: function (doc, ret) {
-            delete ret._id;
-            return ret;
-        }
-    }));
+    res.status(200).json(formatDocument(updatedNetwork));
 })
 
 export const deleteNetwork = expressAsyncHandler(async (req, res) => {

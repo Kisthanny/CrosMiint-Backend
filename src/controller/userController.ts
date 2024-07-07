@@ -3,6 +3,7 @@ import User, { Role } from "../models/userModel";
 import { ValidatedRequest } from "../middleware/authMiddleware";
 import { generateToken } from "../config/generateToken";
 import { ethers } from "ethers";
+import { formatDocument } from "../util/responseFormatter";
 
 const findOrCreateUser = async (rawAddress: string) => {
     const address = rawAddress.toLocaleLowerCase();
@@ -53,13 +54,7 @@ export const authUser = expressAsyncHandler(async (req: ValidatedRequest, res) =
 
     const user = await findOrCreateUser(address);
 
-    const cleanUser = user.toObject({
-        versionKey: false,
-        transform: function (doc, ret) {
-            delete ret._id;
-            return ret;
-        }
-    })
+    const cleanUser = formatDocument(user);
 
     res.status(201).json({
         ...cleanUser,
@@ -91,13 +86,7 @@ export const updateUser = expressAsyncHandler(async (req: ValidatedRequest, res)
 
     const updatedUser = await user.save();
 
-    res.status(200).json(updatedUser.toObject({
-        versionKey: false,
-        transform: function (doc, ret) {
-            delete ret._id;
-            return ret;
-        }
-    }));
+    res.status(200).json(formatDocument(updatedUser));
 });
 
 export const updateUserAccess = expressAsyncHandler(async (req, res) => {

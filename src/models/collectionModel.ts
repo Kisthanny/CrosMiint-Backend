@@ -25,9 +25,10 @@ export interface ICollection extends Document {
     name: string;
     symbol: string;
     protocol: Protocol;
+    deployedAt: INetwork;
     category?: Category;
     airdrops?: IAirdrop['_id'][];
-    networks?: { network: INetwork['_id']; networkCollection: ICollection['_id'] }[];
+    networks?: { networkId: number; networkCollection: string }[];
     createdAt: Date;
     updatedAt: Date;
 }
@@ -43,10 +44,20 @@ const collectionSchema: Schema<ICollection> = new mongoose.Schema(
         protocol: { type: String, enum: Object.values(Protocol), required: true },
         category: { type: String, enum: Object.values(Category), required: false },
         airdrops: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Airdrop' }],
-        networks: [{
-            network: { type: mongoose.Schema.Types.ObjectId, ref: 'Network', required: true },
-            networkCollection: { type: mongoose.Schema.Types.ObjectId, ref: 'Collection', required: true }
-        }],
+        deployedAt: { type: mongoose.Schema.Types.ObjectId, ref: 'Network', required: true },
+        networks: {
+            type: [{
+                networkId: { type: Number, required: true },
+                networkCollection: { type: String, required: true }
+            }],
+            validate: {
+                validator: function (v: any[]) {
+                    return v.every(item => item.networkId && item.networkCollection);
+                },
+                message: 'Each network must have both networkId and networkCollection fields.'
+            },
+            required: false
+        },
     },
     {
         timestamps: true,
