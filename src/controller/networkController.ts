@@ -1,9 +1,8 @@
 import expressAsyncHandler from "express-async-handler";
-import { ethers } from "ethers";
 import Network from "../models/networkModel";
 
 export const createNetwork = expressAsyncHandler(async (req, res) => {
-    const { networkId, chainName, chainId, gateway, nativeCurrency, rpcUrls = [], blockExplorerUrls = [] } = req.body;
+    const { networkId, chainName, chainId, gateway, nativeCurrency, blockExplorerUrls = [] } = req.body;
     if (!networkId || !chainName || !chainId || !gateway || !nativeCurrency || !nativeCurrency.name || !nativeCurrency.symbol || !nativeCurrency.decimals) {
         res.status(400);
         throw new Error("missing argument")
@@ -21,7 +20,6 @@ export const createNetwork = expressAsyncHandler(async (req, res) => {
         chainId,
         gateway,
         nativeCurrency,
-        rpcUrls,
         blockExplorerUrls
     })
 
@@ -49,7 +47,7 @@ export const getNetworks = expressAsyncHandler(async (req, res) => {
 })
 
 export const updateNetwork = expressAsyncHandler(async (req, res) => {
-    const { networkId, chainName, chainId, gateway, nativeCurrency, rpcUrls, blockExplorerUrls } = req.body;
+    const { networkId, chainName, chainId, gateway, nativeCurrency, blockExplorerUrls } = req.body;
 
     if (!networkId) {
         res.status(400);
@@ -71,7 +69,6 @@ export const updateNetwork = expressAsyncHandler(async (req, res) => {
     network.chainId = chainId || network.chainId;
     network.gateway = gateway || network.gateway;
     network.nativeCurrency = nativeCurrency || network.nativeCurrency;
-    network.rpcUrls = rpcUrls || network.rpcUrls;
     network.blockExplorerUrls = blockExplorerUrls || network.blockExplorerUrls;
 
     const updatedNetwork = await network.save();

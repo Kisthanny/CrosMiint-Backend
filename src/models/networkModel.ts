@@ -11,7 +11,6 @@ export interface INetwork extends Document {
         symbol: string;
         decimals: number;
     };
-    rpcUrls?: string[];
     blockExplorerUrls?: string[];
 }
 
@@ -27,7 +26,6 @@ const networkSchema: Schema<INetwork> = new mongoose.Schema(
             symbol: { type: String, required: true },
             decimals: { type: Number, required: true },
         },
-        rpcUrls: [{ type: String, required: false }],
         blockExplorerUrls: [{ type: String, required: false }],
     },
     {
