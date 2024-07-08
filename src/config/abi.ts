@@ -455,6 +455,11 @@ const abi: { [key: string]: any } = {
                 {
                     "components": [
                         {
+                            "internalType": "uint16",
+                            "name": "dropId",
+                            "type": "uint16"
+                        },
+                        {
                             "internalType": "uint256",
                             "name": "supply",
                             "type": "uint256"
