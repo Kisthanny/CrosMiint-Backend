@@ -54,10 +54,8 @@ export const authUser = expressAsyncHandler(async (req: ValidatedRequest, res) =
 
     const user = await findOrCreateUser(address);
 
-    const cleanUser = formatDocument(user);
-
     res.status(201).json({
-        ...cleanUser,
+        ...formatDocument(user),
         token: generateToken(String(user._id)),
     });
 });

@@ -30,9 +30,7 @@ export const createNetwork = expressAsyncHandler(async (req, res) => {
 export const getNetworks = expressAsyncHandler(async (req, res) => {
     const networks = await Network.find()
 
-    const cleanNetworks = networks.map(network => formatDocument(network))
-
-    res.status(200).json(cleanNetworks)
+    res.status(200).json(formatDocument(networks))
 })
 
 export const updateNetwork = expressAsyncHandler(async (req, res) => {
