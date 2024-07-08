@@ -6,7 +6,8 @@
   "scripts": {
     "start": "ts-node src/index.ts",
     "start:dev": "nodemon",
-    "test": "node src/index.js"
+    "test": "node src/index.js",
+    "typechain": "node filter-and-run-typechain.js"
   },
   "author": "KK Hong",
   "license": "ISC",
@@ -20,12 +21,14 @@
     "mongoose": "^8.4.4"
   },
   "devDependencies": {
+    "@typechain/ethers-v6": "^0.5.1",
     "@types/cors": "^2.8.17",
     "@types/express": "^4.17.21",
     "@types/jsonwebtoken": "^9.0.6",
     "@types/node": "^20.14.9",
     "nodemon": "^3.1.4",
     "ts-node": "^10.9.2",
+    "typechain": "^8.3.2",
     "typescript": "^5.5.3"
   }
 }

@@ -1,7 +1,8 @@
 import { ethers } from "ethers";
 import rpcUrls from "../config/rpcUrls";
 import abi from "../config/abi";
-import {Protocol} from "../models/collectionModel";
+import { Protocol } from "../models/collectionModel";
+import { Collection721, Collection1155 } from "../types";
 
 export interface BlockchainServiceOptions {
     protocol: Protocol;
@@ -17,12 +18,47 @@ export const getProvider = (networkId: number): ethers.JsonRpcProvider => {
     return new ethers.JsonRpcProvider(rpcUrl);
 }
 
-export const getContract = (options: BlockchainServiceOptions): ethers.Contract => {
+export const getContract = (options: BlockchainServiceOptions): Collection721 | Collection1155 => {
     const { protocol, address, networkId } = options;
     const provider = getProvider(networkId);
     const contractAbi = abi[protocol];
     if (!contractAbi) {
         throw new Error(`No ABI found for protocol: ${protocol}`);
     }
-    return new ethers.Contract(address, contractAbi, provider);
+
+    // 根据协议选择合约类型
+    switch (protocol) {
+        case Protocol.ERC721:
+            return new ethers.Contract(address, contractAbi, provider) as unknown as Collection721;
+        case Protocol.ERC1155:
+            return new ethers.Contract(address, contractAbi, provider) as unknown as Collection1155;
+        default:
+            throw new Error(`Unsupported protocol: ${protocol}`);
+    }
 }
+
+export const getBlockTime = async (networkId: number) => {
+    const provider = getProvider(networkId);
+    const block = await provider.getBlock("latest");
+    if (!block) {
+        throw new Error()
+    }
+    return block.timestamp;
+}
+
+export const blockTimeToDate = (blockTime: number | bigint): Date => {
+    let timeInMillis: number;
+
+    if (typeof blockTime === 'bigint') {
+        timeInMillis = Number(blockTime);
+    } else {
+        timeInMillis = blockTime;
+    }
+
+    // Check if the blockTime is in seconds or milliseconds
+    // If the blockTime is less than 1e10, it's likely in seconds
+    if (timeInMillis < 1e10) {
+        return new Date(timeInMillis * 1000); // Convert seconds to milliseconds
+    }
+    return new Date(timeInMillis); // Already in milliseconds
+};
