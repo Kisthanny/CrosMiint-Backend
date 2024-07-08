@@ -6,6 +6,7 @@ import userRouter from "./router/userRouter";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler";
 import networkRouter from "./router/networkRouter";
 import collectionRouter from "./router/collectionRouter";
+import airdropRouter from "./router/airdropRouter";
 
 dotenv.config();
 
@@ -33,6 +34,7 @@ app.get("/", (req, res) => {
 app.use("/api/user", userRouter);
 app.use("/api/network", networkRouter);
 app.use("/api/collection", collectionRouter);
+app.use("/api/airdrop", airdropRouter);
 
 // error handle
 app.use(notFoundHandler);

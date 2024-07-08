@@ -4,16 +4,16 @@ import { ICollection } from "./collectionModel";
 // 定义 IAirdrop 接口
 export interface IAirdrop extends Document {
     fromCollection: ICollection['_id'],
-    supply: number;
-    minted: number;
+    dropIndex: string;
+    supply: string;
+    minted: string;
     startTime: Date;
     endTime: Date;
-    price: number;
+    price: string;
     hasWhiteListPhase: boolean;
-    whitelistEndTime?: Date;
-    whitelistAddresses?: string[];
-    whiteListPrice?: number;
-    mintLimitPerWallet?: number;
+    whiteListEndTime?: Date;
+    whiteListPrice?: string;
+    mintLimitPerWallet?: string;
     previewImage?: string;
     createdAt: Date;
     updatedAt: Date;
@@ -23,16 +23,16 @@ export interface IAirdrop extends Document {
 const airdropSchema: Schema<IAirdrop> = new mongoose.Schema(
     {
         fromCollection: { type: mongoose.Schema.Types.ObjectId, ref: 'Collection', required: true },
-        supply: { type: Number, required: true },
-        minted: { type: Number, required: true },
+        dropIndex: { type: String, required: true },
+        supply: { type: String, required: true },
+        minted: { type: String, default: '0' },
         startTime: { type: Date, required: true },
         endTime: { type: Date, required: true },
-        price: { type: Number, required: true },
+        price: { type: String, required: true },
         hasWhiteListPhase: { type: Boolean, required: true },
-        whitelistEndTime: { type: Date, required: false },
-        whitelistAddresses: { type: [String], required: false },
-        whiteListPrice: { type: Number, required: false },
-        mintLimitPerWallet: { type: Number, required: false },
+        whiteListEndTime: { type: Date, required: false },
+        whiteListPrice: { type: String, required: false },
+        mintLimitPerWallet: { type: String, required: false },
         previewImage: { type: String, required: false },
     },
     {
