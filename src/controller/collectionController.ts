@@ -19,11 +19,11 @@ export const createCollection = expressAsyncHandler(async (req: ValidatedRequest
         throw new Error("Unauthorized");
     }
 
-    const { address: rawAddress, logoURI, name, symbol, protocol, deployedAt, networks = [] } = req.body;
+    const { address: rawAddress, protocol, deployedAt, networks = [], isBase } = req.body;
 
     const address = (rawAddress as String).toLocaleLowerCase();
 
-    if (!address || !logoURI || !name || !symbol || !protocol || !deployedAt) {
+    if (!address || !protocol || !deployedAt || isBase === undefined) {
         res.status(400);
         throw new Error("missing argument");
     }
@@ -55,9 +55,17 @@ export const createCollection = expressAsyncHandler(async (req: ValidatedRequest
         networkId: deployedAt
     })
 
-    const ownerFromBlock = await contract.owner();
+    const promiseList =
+        [
+            contract.owner(),
+            contract.name(),
+            contract.symbol(),
+            contract.logoURI(),
+        ]
 
-    if ((ownerFromBlock as string).toLocaleLowerCase() !== user.address) {
+    const [ownerFromBlock, name, symbol, logoURI] = await Promise.all(promiseList);
+
+    if (ownerFromBlock.toLocaleLowerCase() !== user.address) {
         res.status(401);
         throw new Error("Unauthorized");
     }
@@ -88,6 +96,7 @@ export const createCollection = expressAsyncHandler(async (req: ValidatedRequest
         protocol,
         networks,
         owner: user,
+        isBase,
         deployedAt: network,
     })
 
@@ -137,7 +146,7 @@ export const getCollections = expressAsyncHandler(async (req, res) => {
     const total = await Collection.countDocuments(query);
 
     res.status(200).json({
-        collections:formatDocument(collections),
+        collections: formatDocument(collections),
         total,
         page,
         pages: Math.ceil(total / limit),
