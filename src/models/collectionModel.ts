@@ -29,6 +29,7 @@ export interface ICollection extends Document {
     isBase: boolean;
     category?: Category;
     airdrops?: IAirdrop['_id'][];
+    previewImage?: string;
     networks?: { networkId: number; networkCollection: string }[];
     createdAt: Date;
     updatedAt: Date;
@@ -47,6 +48,7 @@ const collectionSchema: Schema<ICollection> = new mongoose.Schema(
         airdrops: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Airdrop' }],
         deployedAt: { type: mongoose.Schema.Types.ObjectId, ref: 'Network', required: true },
         isBase: { type: Boolean, required: true },
+        previewImage: { type: String, required: false },
         networks: {
             type: [{
                 networkId: { type: Number, required: true },

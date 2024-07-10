@@ -11,13 +11,11 @@ export enum MetadataType {
 // 定义 INFT 接口
 export interface INFT extends Document {
     tokenId: string;
-    tokenURI: string;
+    tokenURI?: string;
     amount: number;
     owner: Types.ObjectId | IUser['_id'];
-    creator: Types.ObjectId | IUser['_id'];
     fromCollection: Types.ObjectId | ICollection['_id'];
     metadataType: MetadataType;
-    blockchainId: number;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -26,13 +24,11 @@ export interface INFT extends Document {
 const nftSchema: Schema<INFT> = new mongoose.Schema(
     {
         tokenId: { type: String, required: true },
-        tokenURI: { type: String, required: true },
+        tokenURI: { type: String, required: false },
         amount: { type: Number, required: true, default: 1 },
         owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-        creator: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
         fromCollection: { type: mongoose.Schema.Types.ObjectId, ref: 'Collection', required: true },
         metadataType: { type: String, enum: Object.values(MetadataType), required: true },
-        blockchainId: { type: Number, required: true },
     },
     {
         timestamps: true,

@@ -14,7 +14,6 @@ export interface IAirdrop extends Document {
     whiteListEndTime?: Date;
     whiteListPrice?: string;
     mintLimitPerWallet?: string;
-    previewImage?: string;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -33,7 +32,6 @@ const airdropSchema: Schema<IAirdrop> = new mongoose.Schema(
         whiteListEndTime: { type: Date, required: false },
         whiteListPrice: { type: String, required: false },
         mintLimitPerWallet: { type: String, required: false },
-        previewImage: { type: String, required: false },
     },
     {
         timestamps: true,

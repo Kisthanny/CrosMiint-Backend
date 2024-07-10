@@ -7,6 +7,7 @@ import { errorHandler, notFoundHandler } from "./middleware/errorHandler";
 import networkRouter from "./router/networkRouter";
 import collectionRouter from "./router/collectionRouter";
 import airdropRouter from "./router/airdropRouter";
+import nftRouter from "./router/nftRouter";
 
 dotenv.config();
 
@@ -35,6 +36,7 @@ app.use("/api/user", userRouter);
 app.use("/api/network", networkRouter);
 app.use("/api/collection", collectionRouter);
 app.use("/api/airdrop", airdropRouter);
+app.use("/api/nft", nftRouter);
 
 // error handle
 app.use(notFoundHandler);

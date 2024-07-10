@@ -179,3 +179,25 @@ export const updateCategory = expressAsyncHandler(async (req: ValidatedRequest, 
 
     res.status(200).json(formatDocument(collection));
 })
+
+export const updatePreviewImage = expressAsyncHandler(async (req: ValidatedRequest, res) => {
+    const { address: rawAddress, previewImage } = req.body;
+
+    const address = (rawAddress as string).toLocaleLowerCase();
+
+    const collection = await Collection.findOne({ address });
+    if (!collection) {
+        res.status(400);
+        throw new Error(`Collection ${address} does not exist`);
+    }
+
+    if (String(collection.owner) !== String(req.user?._id)) {
+        res.status(401);
+        throw new Error("Unauthorized");
+    }
+
+    collection.previewImage = previewImage;
+    await collection.save();
+
+    res.status(200).json(formatDocument(collection));
+})
