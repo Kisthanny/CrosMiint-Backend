@@ -139,7 +139,7 @@ export const getAirdropList = expressAsyncHandler(async (req, res) => {
     const pages = Math.ceil(total / limit);
 
     res.status(200).json({
-        airdrops: formatDocument(airdrops),
+        dataList: formatDocument(airdrops),
         total,
         page,
         pages,

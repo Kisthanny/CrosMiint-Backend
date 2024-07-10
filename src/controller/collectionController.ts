@@ -146,7 +146,7 @@ export const getCollections = expressAsyncHandler(async (req, res) => {
     const total = await Collection.countDocuments(query);
 
     res.status(200).json({
-        collections: formatDocument(collections),
+        dataList: formatDocument(collections),
         total,
         page,
         pages: Math.ceil(total / limit),
