@@ -9,6 +9,7 @@ import collectionRouter from "./router/collectionRouter";
 import airdropRouter from "./router/airdropRouter";
 import nftRouter from "./router/nftRouter";
 import marketRouter from "./router/marketRouter";
+import onMounted from "./hooks/onMounted";
 
 dotenv.config();
 

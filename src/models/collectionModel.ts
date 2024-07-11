@@ -30,7 +30,8 @@ export interface ICollection extends Document {
     category?: Category;
     airdrops?: IAirdrop['_id'][];
     previewImage?: string;
-    networks?: { networkId: number; networkCollection: string }[];
+    networks: { networkId: number; networkCollection: string }[];
+    baseURI?: string;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -62,6 +63,7 @@ const collectionSchema: Schema<ICollection> = new mongoose.Schema(
             },
             required: false
         },
+        baseURI: { type: String, trim: true, required: false },
     },
     {
         timestamps: true,

@@ -6,6 +6,7 @@ import Collection, { Protocol, Category } from "../models/collectionModel";
 import User from "../models/userModel";
 import { getContract } from "../util/blockchainService";
 import { formatDocument } from "../util/responseFormatter";
+import addColleciton721Listener from "../listener/collection721Listener";
 
 type SingleNetwork = {
     networkId: number;
@@ -13,17 +14,11 @@ type SingleNetwork = {
 }
 
 export const createCollection = expressAsyncHandler(async (req: ValidatedRequest, res) => {
-    const user = req.user;
-    if (!user) {
-        res.status(401);
-        throw new Error("Unauthorized");
-    }
-
-    const { address: rawAddress, protocol, deployedAt, networks = [], isBase } = req.body;
+    const { address: rawAddress, protocol, deployedAt, networks = [] } = req.body;
 
     const address = (rawAddress as String).toLocaleLowerCase();
 
-    if (!address || !protocol || !deployedAt || isBase === undefined) {
+    if (!address || !protocol || !deployedAt) {
         res.status(400);
         throw new Error("missing argument");
     }
@@ -49,27 +44,6 @@ export const createCollection = expressAsyncHandler(async (req: ValidatedRequest
         throw new Error("invalid deployedAt networkId");
     }
 
-    const contract = getContract({
-        protocol: protocol as Protocol,
-        address,
-        networkId: deployedAt
-    })
-
-    const promiseList =
-        [
-            contract.owner(),
-            contract.name(),
-            contract.symbol(),
-            contract.logoURI(),
-        ]
-
-    const [ownerFromBlock, name, symbol, logoURI] = await Promise.all(promiseList);
-
-    if (ownerFromBlock.toLocaleLowerCase() !== user.address) {
-        res.status(401);
-        throw new Error("Unauthorized");
-    }
-
     const networkIds = allNetworks.map(n => n.networkId);
     const updateCrosschainCollections = networks.map(async (n: SingleNetwork) => {
         if (!networkIds.includes(n.networkId) && ethers.isAddress(n.networkCollection)) {
@@ -86,21 +60,11 @@ export const createCollection = expressAsyncHandler(async (req: ValidatedRequest
         }
     })
 
-    await Promise.all(updateCrosschainCollections)
+    await Promise.all(updateCrosschainCollections);
 
-    const collection = await Collection.create({
-        address,
-        logoURI,
-        name,
-        symbol,
-        protocol,
-        networks,
-        owner: user,
-        isBase,
-        deployedAt: network,
-    })
+    addColleciton721Listener(address, network.networkId, networks);
 
-    res.status(200).json(formatDocument(collection))
+    res.status(200).json({ message: "success" });
 })
 
 export const getCollections = expressAsyncHandler(async (req, res) => {

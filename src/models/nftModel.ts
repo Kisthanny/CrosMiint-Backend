@@ -16,7 +16,7 @@ export interface INFT extends Document {
     amount: number;
     owner: Types.ObjectId | IUser['_id'];
     fromCollection: Types.ObjectId | ICollection['_id'];
-    metadataType: MetadataType;
+    metadataType?: MetadataType;
     latestMarket: Types.ObjectId | IMarketItem['_id'];
     createdAt: Date;
     updatedAt: Date;
@@ -30,7 +30,7 @@ const nftSchema: Schema<INFT> = new mongoose.Schema(
         amount: { type: Number, required: true, default: 1 },
         owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
         fromCollection: { type: mongoose.Schema.Types.ObjectId, ref: 'Collection', required: true },
-        metadataType: { type: String, enum: Object.values(MetadataType), required: true },
+        metadataType: { type: String, enum: Object.values(MetadataType), required: false },
         latestMarket: { type: mongoose.Schema.Types.ObjectId, ref: "MarketItem", required: false },
     },
     {
