@@ -6,13 +6,11 @@ import { formatDocument } from "../util/responseFormatter";
 import { Collection721, Collection1155 } from "../types";
 import NFT, { MetadataType } from "../models/nftModel";
 import User from "../models/userModel";
+import { findOrCreateUser } from "./userController";
 
-const createNFT = async (tokenId: string, contract: Collection721, user: any, collectionId: any, metadataType: MetadataType) => {
-    const validOwner = (await contract.ownerOf(tokenId)).toLocaleLowerCase() === user.address;
-
-    if (!validOwner) {
-        throw new Error(`Unauthorized for tokenId ${tokenId}`);
-    }
+const createNFT = async (tokenId: string, contract: Collection721, collectionId: any, metadataType: MetadataType) => {
+    const ownerAddress = await contract.ownerOf(tokenId);
+    const owner = await findOrCreateUser(ownerAddress);
 
     const exist = await NFT.exists({
         fromCollection: collectionId,
@@ -25,7 +23,7 @@ const createNFT = async (tokenId: string, contract: Collection721, user: any, co
     return new NFT({
         tokenId,
         amount: 1,
-        owner: user._id,
+        owner,
         fromCollection: collectionId,
         metadataType
     });
@@ -33,12 +31,6 @@ const createNFT = async (tokenId: string, contract: Collection721, user: any, co
 
 export const create721Token = expressAsyncHandler(async (req: ValidatedRequest, res) => {
     const { startTokenId, amount = 1, collection: rawAddress, metadataType } = req.body;
-
-    const user = req.user;
-    if (!user) {
-        res.status(400);
-        throw new Error("Unauthorized");
-    }
 
     if (!startTokenId || !rawAddress || !metadataType) {
         res.status(400);
@@ -66,7 +58,7 @@ export const create721Token = expressAsyncHandler(async (req: ValidatedRequest, 
     const createNFTPromises = [];
     for (let i = 0; i < amount; i++) {
         const tokenId = (BigInt(startTokenId) + BigInt(i)).toString();
-        createNFTPromises.push(createNFT(tokenId, contract, user, collectionDoc._id, metadataType));
+        createNFTPromises.push(createNFT(tokenId, contract, collectionDoc._id, metadataType));
     }
 
     const newNFTs = await Promise.all(createNFTPromises);

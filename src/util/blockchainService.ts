@@ -2,7 +2,10 @@ import { ethers } from "ethers";
 import rpcUrls from "../config/rpcUrls";
 import abi from "../config/abi";
 import { Protocol } from "../models/collectionModel";
-import { Collection721, Collection1155 } from "../types";
+import { Collection721, Collection1155, NFTMarketplace } from "../types";
+import NFTMarketplaceArtifacts from "../../artifacts/contracts/NFTMarketplace.sol/NFTMarketplace.json";
+import Marketplace from "../models/marketplaceModel";
+import Network from "../models/networkModel";
 
 export interface BlockchainServiceOptions {
     protocol: Protocol;
@@ -18,10 +21,9 @@ export const getProvider = (networkId: number): ethers.JsonRpcProvider => {
     return new ethers.JsonRpcProvider(rpcUrl);
 }
 
-export const getContract = (options: BlockchainServiceOptions): Collection721 | Collection1155 => {
-    const { protocol, address, networkId } = options;
+export const getContract = ({ protocol, address, networkId }: BlockchainServiceOptions): Collection721 | Collection1155 => {
     const provider = getProvider(networkId);
-    const contractAbi = abi[protocol];
+    const contractAbi = protocol === Protocol.ERC721 ? abi.Collection721 : abi.Collection1155;
     if (!contractAbi) {
         throw new Error(`No ABI found for protocol: ${protocol}`);
     }
@@ -35,6 +37,20 @@ export const getContract = (options: BlockchainServiceOptions): Collection721 | 
         default:
             throw new Error(`Unsupported protocol: ${protocol}`);
     }
+}
+
+export const getMarketplaceContract = async (networkId: string | number) => {
+    const network = await Network.findOne({ networkId });
+    if (!network) {
+        throw new Error(`Invalid networkId ${networkId}`)
+    }
+    const marketplace = await Marketplace.findOne({ network });
+    if (!marketplace) {
+        throw new Error(`Invalid Marketplace at network: ${networkId}\nplease contact admin`);
+    }
+    const provider = getProvider(Number(networkId));
+    const contractAbi = abi.NFTMarketplace;
+    return new ethers.Contract(marketplace.address, contractAbi, provider) as unknown as NFTMarketplace;
 }
 
 export const getBlockTime = async (networkId: number) => {

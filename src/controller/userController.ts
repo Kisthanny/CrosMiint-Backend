@@ -5,7 +5,7 @@ import { generateToken } from "../config/generateToken";
 import { ethers } from "ethers";
 import { formatDocument } from "../util/responseFormatter";
 
-const findOrCreateUser = async (rawAddress: string) => {
+export const findOrCreateUser = async (rawAddress: string) => {
     const address = rawAddress.toLocaleLowerCase();
     if (!ethers.isAddress(address)) {
         throw new Error("User address Invalid");
