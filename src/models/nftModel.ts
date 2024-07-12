@@ -13,7 +13,7 @@ export enum MetadataType {
 export interface INFT extends Document {
     tokenId: string;
     tokenURI?: string;
-    amount: number;
+    amount: string;
     owner: Types.ObjectId | IUser['_id'];
     fromCollection: Types.ObjectId | ICollection['_id'];
     metadataType?: MetadataType;
@@ -27,7 +27,7 @@ const nftSchema: Schema<INFT> = new mongoose.Schema(
     {
         tokenId: { type: String, required: true },
         tokenURI: { type: String, required: false },
-        amount: { type: Number, required: true, default: 1 },
+        amount: { type: String, required: true },
         owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
         fromCollection: { type: mongoose.Schema.Types.ObjectId, ref: 'Collection', required: true },
         metadataType: { type: String, enum: Object.values(MetadataType), required: false },

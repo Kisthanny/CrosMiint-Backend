@@ -61,12 +61,7 @@ export const authUser = expressAsyncHandler(async (req: ValidatedRequest, res) =
 });
 
 export const updateUser = expressAsyncHandler(async (req: ValidatedRequest, res) => {
-    const { address, name, avatar, bio, email, facebook, twitter, instagram } = req.body;
-
-    if (!address) {
-        res.status(400);
-        throw new Error("missing argument");
-    }
+    const { name, avatar, bio, email, facebook, twitter, instagram } = req.body;
 
     const user = req.user;
     if (!user) {

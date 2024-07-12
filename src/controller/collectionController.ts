@@ -7,6 +7,7 @@ import User from "../models/userModel";
 import { getContract } from "../util/blockchainService";
 import { formatDocument } from "../util/responseFormatter";
 import addColleciton721Listener from "../listener/collection721Listener";
+import addColleciton1155Listener from "../listener/collection1155Listener";
 
 type SingleNetwork = {
     networkId: number;
@@ -14,7 +15,7 @@ type SingleNetwork = {
 }
 
 export const createCollection = expressAsyncHandler(async (req: ValidatedRequest, res) => {
-    const { address: rawAddress, protocol, deployedAt, networks = [] } = req.body;
+    const { address: rawAddress, protocol, deployedAt } = req.body;
 
     const address = (rawAddress as String).toLocaleLowerCase();
 
@@ -44,25 +45,13 @@ export const createCollection = expressAsyncHandler(async (req: ValidatedRequest
         throw new Error("invalid deployedAt networkId");
     }
 
-    const networkIds = allNetworks.map(n => n.networkId);
-    const updateCrosschainCollections = networks.map(async (n: SingleNetwork) => {
-        if (!networkIds.includes(n.networkId) && ethers.isAddress(n.networkCollection)) {
-            res.status(400);
-            throw new Error("invalid networks");
-        }
-        const crosschainCollection = await Collection.findOne({ address: n.networkCollection.toLocaleLowerCase() });
-        if (crosschainCollection) {
-            if (crosschainCollection.networks?.find(e => e.networkId === deployedAt)) {
-                return;
-            }
-            crosschainCollection.networks?.push({ networkId: deployedAt, networkCollection: address });
-            await crosschainCollection.save();
-        }
-    })
+    if (protocol === Protocol.ERC721) {
+        addColleciton721Listener(address, network.networkId);
+    }
+    if (protocol === Protocol.ERC1155) {
+        addColleciton1155Listener(address, network.networkId);
+    }
 
-    await Promise.all(updateCrosschainCollections);
-
-    addColleciton721Listener(address, network.networkId, networks);
 
     res.status(200).json({ message: "success" });
 })

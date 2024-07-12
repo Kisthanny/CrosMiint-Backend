@@ -1,11 +1,11 @@
 import { getContract } from "../util/blockchainService"
 import Collection, { Protocol } from "../models/collectionModel";
 import { Collection721 } from "../types";
-import { dropCreated, tokenMinted } from "../eventHandler/collection721Handler";
+import { baseURISet, crosschainAddressSet, dropCreated, tokenBurned, tokenMinted } from "../eventHandler/collection721Handler";
 import { findOrCreateUser } from "../controller/userController";
 import Network from "../models/networkModel";
 
-const findOrCreateCollection = async (address: string, contract: Collection721, networkId: number | string, networks: { networkId: number; networkCollection: string }[]) => {
+const findOrCreateCollection = async (address: string, contract: Collection721, networkId: number | string) => {
     try {
         const exist = await Collection.exists({ address });
 
@@ -35,34 +35,34 @@ const findOrCreateCollection = async (address: string, contract: Collection721, 
             name,
             symbol,
             isBase,
-            networks,
+            networks: [],
             deployedAt: network,
             protocol: Protocol.ERC721,
         })
     } catch (error) {
         console.error(error);
         if ((error as Error).message.includes("Network")) {
-            await findOrCreateCollection(address, contract, networkId, networks);
+            await findOrCreateCollection(address, contract, networkId);
         }
     }
 }
 
-const addColleciton721Listener = async (address: string, networkId: number, networks: { networkId: number; networkCollection: string }[]) => {
+const addColleciton721Listener = async (address: string, networkId: number) => {
     const contract = getContract({ protocol: Protocol.ERC721, address, networkId }) as Collection721;
 
-    await findOrCreateCollection(address, contract, networkId, networks);
+    await findOrCreateCollection(address, contract, networkId);
 
     contract.addListener("DropCreated", dropCreated.bind(null, address));
 
     contract.addListener("TokenMinted", tokenMinted.bind(null, address));
 
-    contract.addListener("BaseURISet", () => { });
+    contract.addListener("BaseURISet", baseURISet.bind(null, address));
 
-    contract.addListener("TokenBurned", () => { });
+    contract.addListener("TokenBurned", tokenBurned.bind(null, address));
 
     contract.addListener("CrosschainTransferInitiated", () => { });
 
-    contract.addListener("CrosschainAddressSet", () => { });
+    contract.addListener("CrosschainAddressSet", crosschainAddressSet.bind(null, address));
 
     console.log(`listeners added to ${address}`)
 }
