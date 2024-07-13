@@ -39,18 +39,10 @@ export const getContract = ({ protocol, address, networkId }: BlockchainServiceO
     }
 }
 
-export const getMarketplaceContract = async (networkId: string | number) => {
-    const network = await Network.findOne({ networkId });
-    if (!network) {
-        throw new Error(`Invalid networkId ${networkId}`)
-    }
-    const marketplace = await Marketplace.findOne({ network });
-    if (!marketplace) {
-        throw new Error(`Invalid Marketplace at network: ${networkId}\nplease contact admin`);
-    }
+export const getMarketplaceContract = (address: string, networkId: string | number) => {
     const provider = getProvider(Number(networkId));
     const contractAbi = abi.NFTMarketplace;
-    return new ethers.Contract(marketplace.address, contractAbi, provider) as unknown as NFTMarketplace;
+    return new ethers.Contract(address, contractAbi, provider) as unknown as NFTMarketplace;
 }
 
 export const getBlockTime = async (networkId: number) => {

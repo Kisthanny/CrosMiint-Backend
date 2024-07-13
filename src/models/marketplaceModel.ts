@@ -3,7 +3,7 @@ import { INetwork } from "./networkModel";
 
 // 定义 IMarketplace 接口
 export interface IMarketplace extends Document {
-    network: INetwork["_id"],
+    network: INetwork,
     address: string;
 }
 

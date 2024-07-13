@@ -1,85 +1,26 @@
 import expressAsyncHandler from "express-async-handler";
 import { ValidatedRequest } from "../middleware/authMiddleware";
-import Collection, { Protocol } from "../models/collectionModel";
 import { getMarketplaceContract } from "../util/blockchainService";
 import { formatDocument } from "../util/responseFormatter";
 import { Collection721, Collection1155, NFTMarketplace } from "../types";
+import Collection, { Protocol } from "../models/collectionModel";
 import NFT from "../models/nftModel";
 import User from "../models/userModel";
-import { ethers } from "ethers";
 import Network from "../models/networkModel";
 import Marketplace from "../models/marketplaceModel";
-import MarketItem, { MarketItemStatus, IOffer, Offer } from "../models/marketItemModel";
+import Listing, { ListingStatus } from "../models/ListingModel";
+import Offer from "../models/OfferModel";
 import { findOrCreateUser } from "./userController";
+import addMarketplaceListener from "../listener/marketplaceListener";
+import { ethers } from "ethers";
+import mongoose from "mongoose";
 
-export const createListing = expressAsyncHandler(async (req: ValidatedRequest, res) => {
-    const { networkId, listingId, amount = 1 } = req.body;
-    if (!networkId || !listingId) {
-        res.status(400);
-        throw new Error("missing argument");
-    }
-    if (isNaN(amount)) {
-        res.status(400);
-        throw new Error(`Invalid amount ${amount}`);
-    }
-
-    const network = await Network.findOne({ networkId });
-    if (!network) {
-        res.status(400);
-        throw new Error(`Invalid networkId ${networkId}`)
-    }
-
-    const marketplace = await Marketplace.findOne({ network });
-    if (!marketplace) {
-        res.status(400);
-        throw new Error(`Invalid Marketplace at network: ${networkId}\nplease contact admin`);
-    }
-
-    const marketplaceContract = await getMarketplaceContract(networkId);
-    const listing = await marketplaceContract.listings(listingId);
-
-    if (listing.contractAddress === ethers.ZeroAddress) {
-        res.status(400);
-        throw new Error(`Invalid listing ${listingId}`)
-    }
-
-    const seller = await findOrCreateUser(listing.seller);
-
-    const collection = await Collection.findOne({ address: listing.contractAddress.toLocaleLowerCase() });
-    if (!collection) {
-        res.status(400);
-        throw new Error(`Unregistered Collection ${listing.contractAddress}`);
-    }
-
-    const nft = await NFT.findOne({ fromCollection: collection._id, tokenId: listing.tokenId });
-    if (!nft) {
-        res.status(400);
-        throw new Error(`Unregistered NFT ${listing.contractAddress}/${listing.tokenId}`);
-    }
-
-    const previouseMarket = await MarketItem.find({ nft }).sort(({ createdAt: -1 })).limit(1);
-    if (previouseMarket.length && previouseMarket[0].status === MarketItemStatus.Listed) {
-        res.status(400);
-        throw new Error("MarketItem is still listed");
-    }
-
-    const marketItem = await MarketItem.create({
-        seller,
-        price: listing.price.toString(),
-        nft: nft._id,
-        listedAt: new Date(),
-        status: listing.active ? MarketItemStatus.Listed : MarketItemStatus.Canceled,
-        listAmount: String(amount),
-        listingId,
-        network: network._id,
-        offers: [],
-    })
-
-    nft.latestMarket = marketItem;
-    await nft.save();
-
-    res.status(200).json(formatDocument(marketItem))
-})
+export enum Sort {
+    PriceAsc = "priceAsc",
+    PriceDesc = "priceDesc",
+    DateAsc = "dateAsc",
+    DateDesc = "dateDesc",
+}
 
 export const createMarketplace = expressAsyncHandler(async (req, res) => {
     const { address, networkId } = req.body;
@@ -101,17 +42,9 @@ export const createMarketplace = expressAsyncHandler(async (req, res) => {
         throw new Error("Invalid networkId");
     }
 
-    const exist = await Marketplace.exists({ network });
-    if (exist) {
-        res.status(400);
-        throw new Error(`Marketplace on network ${networkId} already exists`);
-    }
+    addMarketplaceListener(address, networkId);
 
-    const marketplace = await Marketplace.create({
-        address,
-        network,
-    })
-    res.status(200).json(formatDocument(marketplace))
+    res.status(200).json({ message: "success" })
 })
 
 export const updateMarketplace = expressAsyncHandler(async (req, res) => {
@@ -142,6 +75,8 @@ export const updateMarketplace = expressAsyncHandler(async (req, res) => {
 
     marketplace.address = address;
     await marketplace.save();
+
+    addMarketplaceListener(address, networkId);
     res.status(200).json(formatDocument(marketplace))
 })
 
@@ -151,11 +86,28 @@ export const getMarketplaceList = expressAsyncHandler(async (req, res) => {
 })
 
 export const getListingList = expressAsyncHandler(async (req, res) => {
-    const { seller: rawSeller, status, pageNum = 1, pageSize = 10 } = req.query;
+    const {
+        seller: rawSeller,
+        status,
+        minPrice,
+        maxPrice,
+        minDate,
+        maxDate,
+        sort,
+        networkId,
+        pageNum = 1,
+        pageSize = 10
+    } = req.query;
 
     const query: {
         seller?: string;
-        status?: MarketItemStatus;
+        status?: ListingStatus;
+        minPrice?: string;
+        maxPrice?: string;
+        minDate?: Date;
+        maxDate?: Date;
+        sort?: Sort;
+        network?: mongoose.Schema.Types.ObjectId;
     } = {};
 
     if (rawSeller) {
@@ -169,71 +121,31 @@ export const getListingList = expressAsyncHandler(async (req, res) => {
     }
 
     if (status) {
-        const valid = Object.values(MarketItemStatus).includes(status as MarketItemStatus)
+        const valid = Object.values(ListingStatus).includes(status as ListingStatus)
         if (!valid) {
             res.status(400);
             throw new Error(`Invalid status ${status}`)
         }
-        query.status = status as MarketItemStatus;
+        query.status = status as ListingStatus;
     }
 
     const limit = parseInt(pageSize as string, 10);
     const page = parseInt(pageNum as string, 10);
     const skip = (page - 1) * limit;
 
-    const dataList = await MarketItem.find(query)
+    const dataList = await Listing.find(query)
         .skip(skip)
         .limit(limit)
         .populate("seller", "address name avatar")
         .populate("nft", "tokenURI tokenId")
+        .populate("network", "networkId chainName")
 
-    const total = await MarketItem.countDocuments(query);
+    const total = await Listing.countDocuments(query);
 
     res.status(200).json({
         dataList: formatDocument(dataList),
         total,
         page,
         pages: Math.ceil(total / limit),
-    })
-})
-
-export const offerMade = expressAsyncHandler(async (req, res) => {
-    const { networkId, listingId, offerer, offerPrice, offerIndex } = req.body;
-    if (!networkId || !listingId || !offerer || !offerPrice) {
-        res.status(400);
-        throw new Error("missing argument");
-    }
-
-    if (!ethers.isAddress(offerer)) {
-        res.status(400);
-        throw new Error(`Invalid address ${offerer}`);
-    }
-
-    const offererDoc = await findOrCreateUser(offerer);
-
-    const network = await Network.findOne({ networkId });
-    if (!network) {
-        res.status(400);
-        throw new Error(`Invalid networkId ${networkId}`)
-    }
-
-    const listingDoc = await MarketItem.findOne({ network, listingId });
-    if (!listingDoc) {
-        res.status(400);
-        throw new Error(`Invalid listingId ${listingId}`);
-    }
-
-    const newOffer = await Offer.create({
-        offerIndex,
-        user: offererDoc,
-        price: offerPrice,
-    })
-
-    listingDoc.offers.push(newOffer);
-    await listingDoc.save();
-
-    res.status(200).json({
-        listing: formatDocument(listingDoc),
-        newOffer: formatDocument(newOffer),
     })
 })

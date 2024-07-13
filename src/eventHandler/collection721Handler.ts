@@ -3,6 +3,7 @@ import Airdrop from "../models/airdropModel";
 import { blockTimeToDate } from "../util/blockchainService";
 import NFT, { MetadataType } from "../models/nftModel";
 import { findOrCreateUser } from "../controller/userController";
+import { Types } from "mongoose";
 
 export const dropCreated = async (
     address: string,
@@ -33,28 +34,31 @@ export const dropCreated = async (
     })
 }
 
-const createNFT = async (tokenId: string, collection: ICollection, holderAddress: string) => {
-    const owner = await findOrCreateUser(holderAddress);
-
+const createNFT = async (tokenId: string, collection: ICollection, userId: Types.ObjectId) => {
     return new NFT({
         tokenId,
         amount: 1,
-        owner,
+        owners: [{
+            owner: userId,
+            amount: 1,
+        }],
         fromCollection: collection,
     });
 };
 
-export const tokenMinted = async (address: string, tokenId: bigint, amount: bigint, holder: string) => {
+export const tokenMinted = async (address: string, tokenId: bigint, amount: bigint, holderAddress: string) => {
     const collection = await Collection.findOne({ address: address.toLocaleLowerCase() });
 
     if (!collection) {
         throw new Error(`Invalid Collection ${address}`)
     }
 
+    const holder = await findOrCreateUser(holderAddress);
+
     const createNFTPromises = [];
     for (let i = 0; BigInt(i) < amount; i++) {
         const _tokenId = (tokenId + BigInt(i)).toString();
-        createNFTPromises.push(createNFT(_tokenId, collection, holder));
+        createNFTPromises.push(createNFT(_tokenId, collection, holder._id as Types.ObjectId));
     }
 
     const newNFTs = await Promise.all(createNFTPromises);
