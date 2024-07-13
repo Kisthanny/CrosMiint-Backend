@@ -2,7 +2,7 @@ import { getMarketplaceContract } from "../util/blockchainService"
 import { NFTMarketplace } from "../types";
 import Network from "../models/networkModel";
 import Marketplace from "../models/marketplaceModel";
-import { bought, cancelled, listed } from "../eventHandler/marketplaceHandler";
+import { bought, cancelled, listed, offerAccepted, offerCancelled, offerMade } from "../eventHandler/marketplaceHandler";
 
 const findOrCreateMarketplace = async (address: string, contract: NFTMarketplace, networkId: number | string) => {
     const exist = await Marketplace.exists({ address });
@@ -30,11 +30,11 @@ const addMarketplaceListener = async (address: string, networkId: number) => {
 
     contract.addListener("Bought", bought.bind(null, networkId));
 
-    contract.addListener("OfferMade", () => { });
+    contract.addListener("OfferMade", offerMade.bind(null, networkId));
 
-    contract.addListener("OfferAccepted", () => { });
+    contract.addListener("OfferAccepted", offerAccepted.bind(null, networkId));
 
-    contract.addListener("OfferCancelled", () => { });
+    contract.addListener("OfferCancelled", offerCancelled.bind(null, networkId));
 
     console.log(`listeners added to ${address}`);
 }

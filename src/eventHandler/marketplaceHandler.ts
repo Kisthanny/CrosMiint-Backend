@@ -3,9 +3,61 @@ import Airdrop from "../models/airdropModel";
 import { blockTimeToDate } from "../util/blockchainService";
 import NFT, { MetadataType } from "../models/nftModel";
 import { findOrCreateUser } from "../controller/userController";
-import Listing, { ListingStatus } from "../models/ListingModel";
+import Listing, { IListing, ListingStatus } from "../models/ListingModel";
 import Network from "../models/networkModel";
 import { Types } from "mongoose";
+import Offer from "../models/OfferModel";
+
+async function updateListingAndNFT(
+    listing: IListing,
+    buyerAddress: string,
+    amount: bigint,
+    price: bigint,
+) {
+    const nft = await NFT.findById(listing.nft);
+    if (!nft) {
+        throw new Error(`Invalid NFT ${listing.nft}`);
+    }
+
+    // update listing doc
+    listing.listAmount = (BigInt(listing.listAmount) - amount).toString();
+    if (Number(listing.listAmount) === 0) {
+        listing.status = ListingStatus.Sold;
+    }
+
+    // update nft doc
+    const sellerId = listing.seller as Types.ObjectId;
+    const buyer = await findOrCreateUser(buyerAddress.toLocaleLowerCase());
+    const buyerId = buyer._id as Types.ObjectId;
+
+    // Update seller's amount
+    const sellerEntry = nft.owners.find(owner => (owner.owner as Types.ObjectId).toString() === sellerId.toString());
+    if (!sellerEntry) {
+        throw new Error("Seller does not own this NFT");
+    }
+
+    const newSellerAmount = BigInt(sellerEntry.amount) - amount;
+    if (newSellerAmount < 0) {
+        throw new Error("Seller does not have enough amount of NFT to sell");
+    }
+    sellerEntry.amount = newSellerAmount.toString();
+
+    // Remove seller entry if the new amount is zero
+    if (newSellerAmount === BigInt(0)) {
+        nft.owners = nft.owners.filter(owner => (owner.owner as Types.ObjectId).toString() !== sellerId.toString());
+    }
+
+    // Update buyer's amount
+    const buyerEntry = nft.owners.find(owner => (owner.owner as Types.ObjectId).toString() === buyerId.toString());
+    if (buyerEntry) {
+        buyerEntry.amount = (BigInt(buyerEntry.amount) + amount).toString();
+    } else {
+        nft.owners.push({ owner: buyerId, amount: amount.toString() });
+    }
+
+    await listing.save();
+    await nft.save();
+}
 
 export const listed = async (
     listingId: bigint,
@@ -16,9 +68,9 @@ export const listed = async (
     price: bigint,
     tokenType: bigint,
 ) => {
-    const seller = await findOrCreateUser(sellerAddress);
+    const seller = await findOrCreateUser(sellerAddress.toLowerCase());
 
-    const collection = await Collection.findOne({ address: contractAddress.toLocaleLowerCase() });
+    const collection = await Collection.findOne({ address: contractAddress.toLowerCase() });
     if (!collection) {
         throw new Error(`Invalid Collection ${contractAddress}`);
     }
@@ -37,7 +89,7 @@ export const listed = async (
         listAmount: amount.toString(),
         offers: [],
         network: collection.deployedAt,
-    })
+    });
 }
 
 export const cancelled = async (networkId: number, listingId: bigint) => {
@@ -49,7 +101,7 @@ export const cancelled = async (networkId: number, listingId: bigint) => {
     const listing = await Listing.findOne({
         network,
         listingId: listingId.toString(),
-    })
+    });
     if (!listing) {
         throw new Error(`Invalid Listing ${network.chainName}/${listing}`)
     }
@@ -73,52 +125,117 @@ export const bought = async (
     const listing = await Listing.findOne({
         network,
         listingId: listingId.toString(),
-    })
+    });
     if (!listing) {
         throw new Error(`Invalid Listing ${network.chainName}/${listing}`)
     }
 
-    const nft = await NFT.findById(listing.nft);
-    if (!nft) {
-        throw new Error(`Invalid nft ${listing.nft}`);
+    await updateListingAndNFT(listing, buyerAddress, amount, price);
+}
+
+export const offerMade = async (
+    networkId: number,
+    listingId: bigint,
+    offerer: string,
+    offerPrice: bigint,
+    amount: bigint,
+    offerIndex: bigint,
+) => {
+    const network = await Network.findOne({ networkId });
+    if (!network) {
+        throw new Error(`Invalid Network ${network}`);
     }
 
-    // update listing doc
-    listing.listAmount = (BigInt(listing.listAmount) - amount).toString();
-    if (Number(listing.listAmount) === 0) {
-        listing.status = ListingStatus.Sold;
+    const listing = await Listing.findOne({
+        network,
+        listingId: listingId.toString(),
+    });
+    if (!listing) {
+        throw new Error(`Invalid Listing ${network.chainName}/${listing}`)
     }
 
-    // update nft doc
-    const sellerId = listing.seller as Types.ObjectId;
-    const buyer = await findOrCreateUser(buyerAddress.toLocaleLowerCase());
-    const buyerId = buyer._id as Types.ObjectId;
+    const user = await findOrCreateUser(offerer.toLowerCase());
 
-    // Update seller's amount
-    const sellerEntry = nft.owners.find(owner => (owner.owner as Types.ObjectId).toString() === sellerId.toString());
-    if (!sellerEntry) {
-        throw new Error(`Seller does not own this NFT`);
+    await Offer.create({
+        offerIndex: offerIndex.toString(),
+        offerer: user,
+        price: offerPrice.toString(),
+        amount: amount.toString(),
+        fromListing: listing,
+    });
+}
+
+export const offerAccepted = async (
+    networkId: number,
+    listingId: bigint,
+    offerer: string,
+    offerPrice: bigint,
+    amount: bigint,
+    offerIndex: bigint,
+) => {
+    const network = await Network.findOne({ networkId });
+    if (!network) {
+        throw new Error(`Invalid Network ${network}`);
     }
 
-    const newSellerAmount = BigInt(sellerEntry.amount) - amount;
-    if (newSellerAmount < 0) {
-        throw new Error(`Seller does not have enough amount of NFT to sell`);
-    }
-    sellerEntry.amount = newSellerAmount.toString();
-
-    // Remove seller entry if the new amount is zero
-    if (newSellerAmount === BigInt(0)) {
-        nft.owners = nft.owners.filter(owner => (owner.owner as Types.ObjectId).toString() !== sellerId.toString());
+    const listing = await Listing.findOne({
+        network,
+        listingId: listingId.toString(),
+    });
+    if (!listing) {
+        throw new Error(`Invalid Listing ${network.chainName}/${listing}`)
     }
 
-    // Update buyer's amount
-    const buyerEntry = nft.owners.find(owner => (owner.owner as Types.ObjectId).toString() === buyerId.toString());
-    if (buyerEntry) {
-        buyerEntry.amount = (BigInt(buyerEntry.amount) + amount).toString();
-    } else {
-        nft.owners.push({ owner: buyerId, amount: amount.toString() });
+    const offer = await Offer.findOne({
+        fromListing: listing._id,
+        offerIndex: offerIndex.toString(),
+    });
+    if (!offer) {
+        throw new Error(`Invalid Offer ${listingId}/${offerIndex}`);
+    }
+
+    if (amount > BigInt(listing.listAmount)) {
+        throw new Error("Offer amount exceeds available listing amount");
+    }
+
+    await updateListingAndNFT(listing, offerer, amount, offerPrice);
+
+    // update offer doc
+    offer.accepted = true;
+    await offer.save();
+}
+
+export const offerCancelled = async (
+    networkId: number,
+    listingId: bigint,
+    offerer: string,
+    offerIndex: bigint,
+) => {
+    const network = await Network.findOne({ networkId });
+    if (!network) {
+        throw new Error(`Invalid Network ${network}`);
+    }
+
+    const listing = await Listing.findOne({
+        network,
+        listingId: listingId.toString(),
+    });
+    if (!listing) {
+        throw new Error(`Invalid Listing ${network.chainName}/${listing}`)
+    }
+
+    const offer = await Offer.findOneAndDelete({
+        fromListing: listing._id,
+        offerIndex: offerIndex.toString(),
+    });
+    if (!offer) {
+        throw new Error(`Invalid Offer ${listingId}/${offerIndex}`);
+    }
+
+    const deleteIndex = listing.offers.findIndex(e => e === offer._id);
+    if (deleteIndex !== -1) {
+        listing.offers.splice(deleteIndex, 1);
     }
 
     await listing.save();
-    await nft.save();
 }
