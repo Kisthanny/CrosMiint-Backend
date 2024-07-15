@@ -1,7 +1,7 @@
 import mongoose, { Document, Schema, Types } from "mongoose";
 import { ICollection } from "./collectionModel";
 import { IUser } from "./userModel";
-import { IListing } from "./ListingModel";
+import { IListing } from "./listingModel";
 
 export enum MetadataType {
     Image = 'Image',

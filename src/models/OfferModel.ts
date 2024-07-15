@@ -1,6 +1,6 @@
 import mongoose, { Document, Schema } from "mongoose";
 import { IUser } from "./userModel";
-import { IListing } from "./ListingModel";
+import { IListing } from "./listingModel";
 
 export interface IOffer extends Document {
     offerIndex: string;

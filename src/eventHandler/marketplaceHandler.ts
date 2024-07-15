@@ -3,7 +3,7 @@ import Airdrop from "../models/airdropModel";
 import { blockTimeToDate } from "../util/blockchainService";
 import NFT, { MetadataType } from "../models/nftModel";
 import { findOrCreateUser } from "../controller/userController";
-import Listing, { IListing, ListingStatus } from "../models/ListingModel";
+import Listing, { IListing, ListingStatus } from "../models/listingModel";
 import Network from "../models/networkModel";
 import { Types } from "mongoose";
 import Offer from "../models/OfferModel";

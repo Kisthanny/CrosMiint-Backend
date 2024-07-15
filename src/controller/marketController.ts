@@ -3,7 +3,7 @@ import { formatDocument } from "../util/responseFormatter";
 import User from "../models/userModel";
 import Network from "../models/networkModel";
 import Marketplace from "../models/marketplaceModel";
-import Listing, { ListingStatus } from "../models/ListingModel";
+import Listing, { ListingStatus } from "../models/listingModel";
 import { ethers } from "ethers";
 import mongoose from "mongoose";
 import startPollingMarketplace from "../filter/marketplaceFilter";
