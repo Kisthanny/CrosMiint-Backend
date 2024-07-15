@@ -1,5 +1,5 @@
 import { ethers } from "ethers";
-import rpcUrls from "../config/rpcUrls";
+import { rpcUrls, wsUrls } from "../config/rpcUrls";
 import abi from "../config/abi";
 import { Protocol } from "../models/collectionModel";
 import { Collection721, Collection1155, NFTMarketplace } from "../types";
@@ -13,10 +13,14 @@ export interface BlockchainServiceOptions {
     networkId: number;
 }
 
-export const getProvider = (networkId: number): ethers.JsonRpcProvider => {
+export const getProvider = (networkId: number, ws: boolean = false): ethers.JsonRpcProvider | ethers.WebSocketProvider => {
     const rpcUrl = rpcUrls[networkId];
-    if (!rpcUrl) {
-        throw new Error(`No RPC URL found for network ID: ${networkId}`);
+    const wsUrl = wsUrls[networkId];
+    if (!rpcUrl && !wsUrl) {
+        throw new Error(`No api URL found for network ID: ${networkId}`);
+    }
+    if (ws && wsUrl) {
+        return new ethers.WebSocketProvider(wsUrl);
     }
     return new ethers.JsonRpcProvider(rpcUrl);
 }
@@ -52,6 +56,12 @@ export const getBlockTime = async (networkId: number) => {
         throw new Error()
     }
     return block.timestamp;
+}
+
+export const getBlockNumber = async (networkId: number) => {
+    const provider = getProvider(networkId);
+
+    return await provider.getBlockNumber()
 }
 
 export const blockTimeToDate = (blockTime: number | bigint): Date => {

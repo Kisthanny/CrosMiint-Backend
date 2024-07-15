@@ -32,6 +32,7 @@ export interface ICollection extends Document {
     previewImage?: string;
     networks: { networkId: number; networkCollection: string }[];
     baseURI?: string;
+    lastFilterBlock: number;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -64,6 +65,7 @@ const collectionSchema: Schema<ICollection> = new mongoose.Schema(
             required: false
         },
         baseURI: { type: String, trim: true, required: false },
+        lastFilterBlock: { type: Number, required: true },
     },
     {
         timestamps: true,

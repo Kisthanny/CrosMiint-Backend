@@ -1,19 +1,12 @@
 import expressAsyncHandler from "express-async-handler";
-import { ValidatedRequest } from "../middleware/authMiddleware";
-import { getMarketplaceContract } from "../util/blockchainService";
 import { formatDocument } from "../util/responseFormatter";
-import { Collection721, Collection1155, NFTMarketplace } from "../types";
-import Collection, { Protocol } from "../models/collectionModel";
-import NFT from "../models/nftModel";
 import User from "../models/userModel";
 import Network from "../models/networkModel";
 import Marketplace from "../models/marketplaceModel";
 import Listing, { ListingStatus } from "../models/ListingModel";
-import Offer from "../models/OfferModel";
-import { findOrCreateUser } from "./userController";
-import addMarketplaceListener from "../listener/marketplaceListener";
 import { ethers } from "ethers";
 import mongoose from "mongoose";
+import startPollingMarketplace from "../filter/marketplaceFilter";
 
 export enum Sort {
     PriceAsc = "priceAsc",
@@ -42,7 +35,7 @@ export const createMarketplace = expressAsyncHandler(async (req, res) => {
         throw new Error("Invalid networkId");
     }
 
-    addMarketplaceListener(address, networkId);
+    startPollingMarketplace(address, networkId);
 
     res.status(200).json({ message: "success" })
 })
@@ -76,7 +69,7 @@ export const updateMarketplace = expressAsyncHandler(async (req, res) => {
     marketplace.address = address;
     await marketplace.save();
 
-    addMarketplaceListener(address, networkId);
+    startPollingMarketplace(address, networkId);
     res.status(200).json(formatDocument(marketplace))
 })
 

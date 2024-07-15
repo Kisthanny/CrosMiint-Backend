@@ -4,15 +4,9 @@ import Network from "../models/networkModel";
 import { ValidatedRequest } from "../middleware/authMiddleware";
 import Collection, { Protocol, Category } from "../models/collectionModel";
 import User from "../models/userModel";
-import { getContract } from "../util/blockchainService";
 import { formatDocument } from "../util/responseFormatter";
-import addColleciton721Listener from "../listener/collection721Listener";
-import addColleciton1155Listener from "../listener/collection1155Listener";
-
-type SingleNetwork = {
-    networkId: number;
-    networkCollection: string;
-}
+import startPolling721 from "../filter/collection721Filter";
+import startPolling1155 from "../filter/collection1155Filter";
 
 export const createCollection = expressAsyncHandler(async (req: ValidatedRequest, res) => {
     const { address: rawAddress, protocol, deployedAt } = req.body;
@@ -46,10 +40,10 @@ export const createCollection = expressAsyncHandler(async (req: ValidatedRequest
     }
 
     if (protocol === Protocol.ERC721) {
-        addColleciton721Listener(address, network.networkId);
+        startPolling721(address, network.networkId);
     }
     if (protocol === Protocol.ERC1155) {
-        addColleciton1155Listener(address, network.networkId);
+        startPolling1155(address, network.networkId);
     }
 
 
