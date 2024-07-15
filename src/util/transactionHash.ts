@@ -16,20 +16,20 @@ class TransactionHashCache {
         });
     }
 
-    async has(hash: string): Promise<boolean> {
-        return this.cache.has(hash) || !!(await TransactionHash.findOne({ hash }));
+    has(hash: string): boolean {
+        return this.cache.has(hash);
     }
 
-    async add(contractAddress: string, hash: string): Promise<void> {
+    add(contractAddress: string, hash: string) {
         if (this.cache.size >= this.maxSize) {
             const firstHash = this.cache.values().next().value;
             this.cache.delete(firstHash);
-            await TransactionHash.deleteOne({ hash: firstHash });
+            TransactionHash.deleteOne({ hash: firstHash });
         }
 
         this.cache.add(hash);
         const transactionHash = new TransactionHash({ hash, contractAddress });
-        await transactionHash.save();
+        transactionHash.save();
     }
 }
 

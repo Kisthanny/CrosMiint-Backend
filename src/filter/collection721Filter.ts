@@ -53,6 +53,7 @@ export const getEndBlock = (startBlock: number, currentBlock: number) => {
 }
 
 const startPolling721 = async (address: string, networkId: number) => {
+    console.log(`start polling for ${address}`);
     const contract = getContract({ protocol: Protocol.ERC721, address, networkId }) as Collection721;
 
     const collection = await findOrCreateCollection(address, contract, networkId, Protocol.ERC721);
@@ -60,6 +61,7 @@ const startPolling721 = async (address: string, networkId: number) => {
     const transactionHashCache = new TransactionHashCache(100);
     await transactionHashCache.loadFromDatabase(address);
     setInterval(async () => {
+        const startTime = Date.now();
         const currentBlock = await getBlockNumber(networkId);
         // filter all required events
         const endBlock = getEndBlock(collection.lastFilterBlock, currentBlock);
@@ -105,6 +107,7 @@ const startPolling721 = async (address: string, networkId: number) => {
         }
 
         const crosschainAddressSetEvents = await contract.queryFilter(contract.filters.CrosschainAddressSet, collection.lastFilterBlock, endBlock);
+        console.log(crosschainAddressSetEvents.length)
         for (const event of crosschainAddressSetEvents) {
             const txHash = event.transactionHash;
             if (!transactionHashCache.has(txHash)) {
@@ -117,6 +120,7 @@ const startPolling721 = async (address: string, networkId: number) => {
         // update lastFilterBlock
         collection.lastFilterBlock = endBlock;
         await collection.save();
+        console.log(`time consumed for a round of polling ${Date.now() - startTime}`);
     }, 60000);
 }
 

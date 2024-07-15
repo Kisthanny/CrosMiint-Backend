@@ -6,6 +6,7 @@ import { findOrCreateCollection, getEndBlock } from "./collection721Filter";
 import TransactionHashCache from "../util/transactionHash";
 
 const startPolling1155 = async (address: string, networkId: number) => {
+    console.log(`start polling for ${address}`);
     const contract = getContract({ protocol: Protocol.ERC1155, address, networkId }) as Collection1155;
 
     const collection = await findOrCreateCollection(address, contract, networkId, Protocol.ERC1155);
@@ -13,6 +14,7 @@ const startPolling1155 = async (address: string, networkId: number) => {
     const transactionHashCache = new TransactionHashCache(100);
     await transactionHashCache.loadFromDatabase(address);
     setInterval(async () => {
+        const startTime = Date.now();
         const currentBlock = await getBlockNumber(networkId);
         // filter all required events
         const endBlock = getEndBlock(collection.lastFilterBlock, currentBlock);
@@ -50,6 +52,7 @@ const startPolling1155 = async (address: string, networkId: number) => {
         // update lastFilterBlock
         collection.lastFilterBlock = endBlock;
         await collection.save();
+        console.log(`time consumed for a round of polling ${Date.now() - startTime}`);
     }, 60000);
 }
 

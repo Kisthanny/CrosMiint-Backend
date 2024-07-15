@@ -24,6 +24,7 @@ const findOrCreateMarketplace = async (address: string, networkId: number | stri
 }
 
 const startPollingMarketplace = async (address: string, networkId: number) => {
+    console.log(`start polling for ${address}`);
     const contract = getMarketplaceContract(address, networkId);
 
     const marketplace = await findOrCreateMarketplace(address, networkId);
@@ -31,6 +32,7 @@ const startPollingMarketplace = async (address: string, networkId: number) => {
     const transactionHashCache = new TransactionHashCache(100);
     await transactionHashCache.loadFromDatabase(address);
     setInterval(async () => {
+        const startTime = Date.now();
         const currentBlock = await getBlockNumber(networkId);
         // filter all required events
         const endBlock = getEndBlock(marketplace.lastFilterBlock, currentBlock);
@@ -98,6 +100,7 @@ const startPollingMarketplace = async (address: string, networkId: number) => {
         // update lastFilterBlock
         marketplace.lastFilterBlock = endBlock;
         await marketplace.save();
+        console.log(`time consumed for a round of polling ${Date.now() - startTime}`);
     }, 60000);
 }
 
