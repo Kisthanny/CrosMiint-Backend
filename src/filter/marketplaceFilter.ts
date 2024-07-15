@@ -4,6 +4,7 @@ import Marketplace from "../models/marketplaceModel";
 import { bought, cancelled, listed, offerAccepted, offerCancelled, offerMade } from "../eventHandler/marketplaceHandler";
 import { getEndBlock } from "./collection721Filter";
 import TransactionHashCache from "../util/transactionHash";
+import logger from "../util/logger";
 
 const findOrCreateMarketplace = async (address: string, networkId: number | string) => {
     const marketplace = await Marketplace.findOne({ address });
@@ -41,7 +42,7 @@ const startPollingMarketplace = async (address: string, networkId: number) => {
         for (const event of listedEvents) {
             const txHash = event.transactionHash;
             if (!transactionHashCache.has(txHash)) {
-                console.log(`new event: ${event.eventName}`);
+                logger(`new event: ${event.eventName}`);
                 transactionHashCache.add(address, txHash);
                 await listed.apply(null, event.args);
             }
@@ -51,7 +52,7 @@ const startPollingMarketplace = async (address: string, networkId: number) => {
         for (const event of cancelledEvents) {
             const txHash = event.transactionHash;
             if (!transactionHashCache.has(txHash)) {
-                console.log(`new event: ${event.eventName}`);
+                logger(`new event: ${event.eventName}`);
                 transactionHashCache.add(address, txHash);
                 await cancelled.bind(null, networkId).apply(null, event.args);
             }
@@ -61,7 +62,7 @@ const startPollingMarketplace = async (address: string, networkId: number) => {
         for (const event of boughtEvents) {
             const txHash = event.transactionHash;
             if (!transactionHashCache.has(txHash)) {
-                console.log(`new event: ${event.eventName}`);
+                logger(`new event: ${event.eventName}`);
                 transactionHashCache.add(address, txHash);
                 await bought.bind(null, networkId).apply(null, event.args);
             }
@@ -71,7 +72,7 @@ const startPollingMarketplace = async (address: string, networkId: number) => {
         for (const event of offerMadeEvents) {
             const txHash = event.transactionHash;
             if (!transactionHashCache.has(txHash)) {
-                console.log(`new event: ${event.eventName}`);
+                logger(`new event: ${event.eventName}`);
                 transactionHashCache.add(address, txHash);
                 await offerMade.bind(null, networkId).apply(null, event.args);
             }
@@ -81,7 +82,7 @@ const startPollingMarketplace = async (address: string, networkId: number) => {
         for (const event of offerAcceptedEvents) {
             const txHash = event.transactionHash;
             if (!transactionHashCache.has(txHash)) {
-                console.log(`new event: ${event.eventName}`);
+                logger(`new event: ${event.eventName}`);
                 transactionHashCache.add(address, txHash);
                 await offerAccepted.bind(null, networkId).apply(null, event.args);
             }
@@ -91,7 +92,7 @@ const startPollingMarketplace = async (address: string, networkId: number) => {
         for (const event of offerCancelledEvents) {
             const txHash = event.transactionHash;
             if (!transactionHashCache.has(txHash)) {
-                console.log(`new event: ${event.eventName}`);
+                logger(`new event: ${event.eventName}`);
                 transactionHashCache.add(address, txHash);
                 await offerCancelled.bind(null, networkId).apply(null, event.args);
             }
@@ -100,7 +101,7 @@ const startPollingMarketplace = async (address: string, networkId: number) => {
         // update lastFilterBlock
         marketplace.lastFilterBlock = endBlock;
         await marketplace.save();
-        console.log(`time consumed for a round of polling ${Date.now() - startTime}`);
+        logger(`time consumed for a round of polling ${Date.now() - startTime}`);
     }, 60000);
 }
 

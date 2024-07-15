@@ -4,6 +4,7 @@ import { Collection1155 } from "../types";
 import { crosschainAddressSet, tokenBurned, tokenMinted } from "../eventHandler/collection1155Handler";
 import { findOrCreateCollection, getEndBlock } from "./collection721Filter";
 import TransactionHashCache from "../util/transactionHash";
+import logger from "../util/logger";
 
 const startPolling1155 = async (address: string, networkId: number) => {
     console.log(`start polling for ${address}`);
@@ -23,7 +24,7 @@ const startPolling1155 = async (address: string, networkId: number) => {
         for (const event of tokenMintedEvents) {
             const txHash = event.transactionHash;
             if (!transactionHashCache.has(txHash)) {
-                console.log(`new event: ${event.eventName}`);
+                logger(`new event: ${event.eventName}`);
                 transactionHashCache.add(address, txHash);
                 await tokenMinted.bind(null, address).apply(null, event.args);
             }
@@ -33,7 +34,7 @@ const startPolling1155 = async (address: string, networkId: number) => {
         for (const event of tokenBurnedEvents) {
             const txHash = event.transactionHash;
             if (!transactionHashCache.has(txHash)) {
-                console.log(`new event: ${event.eventName}`);
+                logger(`new event: ${event.eventName}`);
                 transactionHashCache.add(address, txHash);
                 await tokenBurned.bind(null, address).apply(null, event.args);
             }
@@ -43,7 +44,7 @@ const startPolling1155 = async (address: string, networkId: number) => {
         for (const event of crosschainAddressSetEvents) {
             const txHash = event.transactionHash;
             if (!transactionHashCache.has(txHash)) {
-                console.log(`new event: ${event.eventName}`);
+                logger(`new event: ${event.eventName}`);
                 transactionHashCache.add(address, txHash);
                 await crosschainAddressSet.bind(null, address).apply(null, event.args);
             }
@@ -52,7 +53,7 @@ const startPolling1155 = async (address: string, networkId: number) => {
         // update lastFilterBlock
         collection.lastFilterBlock = endBlock;
         await collection.save();
-        console.log(`time consumed for a round of polling ${Date.now() - startTime}`);
+        logger(`time consumed for a round of polling ${Date.now() - startTime}`);
     }, 60000);
 }
 
