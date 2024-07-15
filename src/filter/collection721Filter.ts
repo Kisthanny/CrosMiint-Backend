@@ -4,28 +4,7 @@ import { Collection721, Collection1155 } from "../types";
 import { baseURISet, crosschainAddressSet, dropCreated, tokenBurned, tokenMinted } from "../eventHandler/collection721Handler";
 import { findOrCreateUser } from "../controller/userController";
 import Network from "../models/networkModel";
-
-// 维护一个固定大小的FIFO数组
-export class TransactionHashCache {
-    private cache: Set<string>;
-    private maxSize: number;
-
-    constructor(maxSize: number) {
-        this.cache = new Set();
-        this.maxSize = maxSize;
-    }
-
-    has(hash: string): boolean {
-        return this.cache.has(hash);
-    }
-
-    add(hash: string): void {
-        if (this.cache.size >= this.maxSize) {
-            this.cache.delete(this.cache.values().next().value); // 移除第一个元素
-        }
-        this.cache.add(hash);
-    }
-}
+import TransactionHashCache from "../util/transactionHash";
 
 export const findOrCreateCollection = async (address: string, contract: Collection721 | Collection1155, networkId: number | string, protocol: Protocol) => {
     const collection = await Collection.findOne({ address });
@@ -79,6 +58,7 @@ const startPolling721 = async (address: string, networkId: number) => {
     const collection = await findOrCreateCollection(address, contract, networkId, Protocol.ERC721);
 
     const transactionHashCache = new TransactionHashCache(100);
+    await transactionHashCache.loadFromDatabase(address);
     setInterval(async () => {
         const currentBlock = await getBlockNumber(networkId);
         // filter all required events
@@ -89,7 +69,7 @@ const startPolling721 = async (address: string, networkId: number) => {
             const txHash = event.transactionHash;
             if (!transactionHashCache.has(txHash)) {
                 console.log(`new event: ${event.eventName}`);
-                transactionHashCache.add(txHash);
+                transactionHashCache.add(address, txHash);
                 await dropCreated.bind(null, address).apply(null, event.args);
             }
         }
@@ -99,7 +79,7 @@ const startPolling721 = async (address: string, networkId: number) => {
             const txHash = event.transactionHash;
             if (!transactionHashCache.has(txHash)) {
                 console.log(`new event: ${event.eventName}`);
-                transactionHashCache.add(txHash);
+                transactionHashCache.add(address, txHash);
                 await tokenMinted.bind(null, address).apply(null, event.args);
             }
         }
@@ -109,7 +89,7 @@ const startPolling721 = async (address: string, networkId: number) => {
             const txHash = event.transactionHash;
             if (!transactionHashCache.has(txHash)) {
                 console.log(`new event: ${event.eventName}`);
-                transactionHashCache.add(txHash);
+                transactionHashCache.add(address, txHash);
                 await baseURISet.bind(null, address).apply(null, event.args);
             }
         }
@@ -119,7 +99,7 @@ const startPolling721 = async (address: string, networkId: number) => {
             const txHash = event.transactionHash;
             if (!transactionHashCache.has(txHash)) {
                 console.log(`new event: ${event.eventName}`);
-                transactionHashCache.add(txHash);
+                transactionHashCache.add(address, txHash);
                 await tokenBurned.bind(null, address).apply(null, event.args);
             }
         }
@@ -129,7 +109,7 @@ const startPolling721 = async (address: string, networkId: number) => {
             const txHash = event.transactionHash;
             if (!transactionHashCache.has(txHash)) {
                 console.log(`new event: ${event.eventName}`);
-                transactionHashCache.add(txHash);
+                transactionHashCache.add(address, txHash);
                 await crosschainAddressSet.bind(null, address).apply(null, event.args);
             }
         }

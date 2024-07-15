@@ -1,9 +1,9 @@
 import { getBlockNumber, getMarketplaceContract } from "../util/blockchainService"
-import { NFTMarketplace } from "../types";
 import Network from "../models/networkModel";
 import Marketplace from "../models/marketplaceModel";
 import { bought, cancelled, listed, offerAccepted, offerCancelled, offerMade } from "../eventHandler/marketplaceHandler";
-import { getEndBlock, TransactionHashCache } from "./collection721Filter";
+import { getEndBlock } from "./collection721Filter";
+import TransactionHashCache from "../util/transactionHash";
 
 const findOrCreateMarketplace = async (address: string, networkId: number | string) => {
     const marketplace = await Marketplace.findOne({ address });
@@ -23,32 +23,13 @@ const findOrCreateMarketplace = async (address: string, networkId: number | stri
     })
 }
 
-const addMarketplaceListener = async (address: string, networkId: number) => {
-    const contract = getMarketplaceContract(address, networkId);
-
-    await findOrCreateMarketplace(address, networkId);
-
-    contract.addListener("Listed", listed);
-
-    contract.addListener("Cancelled", cancelled.bind(null, networkId));
-
-    contract.addListener("Bought", bought.bind(null, networkId));
-
-    contract.addListener("OfferMade", offerMade.bind(null, networkId));
-
-    contract.addListener("OfferAccepted", offerAccepted.bind(null, networkId));
-
-    contract.addListener("OfferCancelled", offerCancelled.bind(null, networkId));
-
-    console.log(`listeners added to ${address}`);
-}
-
 const startPollingMarketplace = async (address: string, networkId: number) => {
     const contract = getMarketplaceContract(address, networkId);
 
     const marketplace = await findOrCreateMarketplace(address, networkId);
 
     const transactionHashCache = new TransactionHashCache(100);
+    await transactionHashCache.loadFromDatabase(address);
     setInterval(async () => {
         const currentBlock = await getBlockNumber(networkId);
         // filter all required events
@@ -59,7 +40,7 @@ const startPollingMarketplace = async (address: string, networkId: number) => {
             const txHash = event.transactionHash;
             if (!transactionHashCache.has(txHash)) {
                 console.log(`new event: ${event.eventName}`);
-                transactionHashCache.add(txHash);
+                transactionHashCache.add(address, txHash);
                 await listed.apply(null, event.args);
             }
         }
@@ -69,7 +50,7 @@ const startPollingMarketplace = async (address: string, networkId: number) => {
             const txHash = event.transactionHash;
             if (!transactionHashCache.has(txHash)) {
                 console.log(`new event: ${event.eventName}`);
-                transactionHashCache.add(txHash);
+                transactionHashCache.add(address, txHash);
                 await cancelled.bind(null, networkId).apply(null, event.args);
             }
         }
@@ -79,7 +60,7 @@ const startPollingMarketplace = async (address: string, networkId: number) => {
             const txHash = event.transactionHash;
             if (!transactionHashCache.has(txHash)) {
                 console.log(`new event: ${event.eventName}`);
-                transactionHashCache.add(txHash);
+                transactionHashCache.add(address, txHash);
                 await bought.bind(null, networkId).apply(null, event.args);
             }
         }
@@ -89,7 +70,7 @@ const startPollingMarketplace = async (address: string, networkId: number) => {
             const txHash = event.transactionHash;
             if (!transactionHashCache.has(txHash)) {
                 console.log(`new event: ${event.eventName}`);
-                transactionHashCache.add(txHash);
+                transactionHashCache.add(address, txHash);
                 await offerMade.bind(null, networkId).apply(null, event.args);
             }
         }
@@ -99,7 +80,7 @@ const startPollingMarketplace = async (address: string, networkId: number) => {
             const txHash = event.transactionHash;
             if (!transactionHashCache.has(txHash)) {
                 console.log(`new event: ${event.eventName}`);
-                transactionHashCache.add(txHash);
+                transactionHashCache.add(address, txHash);
                 await offerAccepted.bind(null, networkId).apply(null, event.args);
             }
         }
@@ -109,7 +90,7 @@ const startPollingMarketplace = async (address: string, networkId: number) => {
             const txHash = event.transactionHash;
             if (!transactionHashCache.has(txHash)) {
                 console.log(`new event: ${event.eventName}`);
-                transactionHashCache.add(txHash);
+                transactionHashCache.add(address, txHash);
                 await offerCancelled.bind(null, networkId).apply(null, event.args);
             }
         }

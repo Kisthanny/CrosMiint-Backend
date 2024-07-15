@@ -2,7 +2,8 @@ import { getBlockNumber, getContract } from "../util/blockchainService"
 import { Protocol } from "../models/collectionModel";
 import { Collection1155 } from "../types";
 import { crosschainAddressSet, tokenBurned, tokenMinted } from "../eventHandler/collection1155Handler";
-import { findOrCreateCollection, getEndBlock, TransactionHashCache } from "./collection721Filter";
+import { findOrCreateCollection, getEndBlock } from "./collection721Filter";
+import TransactionHashCache from "../util/transactionHash";
 
 const startPolling1155 = async (address: string, networkId: number) => {
     const contract = getContract({ protocol: Protocol.ERC1155, address, networkId }) as Collection1155;
@@ -10,6 +11,7 @@ const startPolling1155 = async (address: string, networkId: number) => {
     const collection = await findOrCreateCollection(address, contract, networkId, Protocol.ERC1155);
 
     const transactionHashCache = new TransactionHashCache(100);
+    await transactionHashCache.loadFromDatabase(address);
     setInterval(async () => {
         const currentBlock = await getBlockNumber(networkId);
         // filter all required events
@@ -20,7 +22,7 @@ const startPolling1155 = async (address: string, networkId: number) => {
             const txHash = event.transactionHash;
             if (!transactionHashCache.has(txHash)) {
                 console.log(`new event: ${event.eventName}`);
-                transactionHashCache.add(txHash);
+                transactionHashCache.add(address, txHash);
                 await tokenMinted.bind(null, address).apply(null, event.args);
             }
         }
@@ -30,7 +32,7 @@ const startPolling1155 = async (address: string, networkId: number) => {
             const txHash = event.transactionHash;
             if (!transactionHashCache.has(txHash)) {
                 console.log(`new event: ${event.eventName}`);
-                transactionHashCache.add(txHash);
+                transactionHashCache.add(address, txHash);
                 await tokenBurned.bind(null, address).apply(null, event.args);
             }
         }
@@ -40,7 +42,7 @@ const startPolling1155 = async (address: string, networkId: number) => {
             const txHash = event.transactionHash;
             if (!transactionHashCache.has(txHash)) {
                 console.log(`new event: ${event.eventName}`);
-                transactionHashCache.add(txHash);
+                transactionHashCache.add(address, txHash);
                 await crosschainAddressSet.bind(null, address).apply(null, event.args);
             }
         }
