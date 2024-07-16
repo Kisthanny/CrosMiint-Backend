@@ -86,6 +86,7 @@ export const getCollections = expressAsyncHandler(async (req, res) => {
 
     const collections = await Collection.find(query)
         .skip(skip)
+        .sort({ createdAt: -1 })
         .limit(limit)
         .populate("owner", "address name avatar")
         .populate("deployedAt", "networkId chainName")

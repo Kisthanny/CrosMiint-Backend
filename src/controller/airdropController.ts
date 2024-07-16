@@ -50,6 +50,7 @@ export const getAirdropList = expressAsyncHandler(async (req, res) => {
     const airdrops = await Airdrop.find(query)
         .skip(skip)
         .limit(limit)
+        .sort({ createdAt: -1 })
         .populate({
             path: "fromCollection",
             select: "address owner logoURI name deployedAt previewImage",

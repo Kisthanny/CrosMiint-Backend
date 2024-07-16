@@ -93,7 +93,7 @@ export const getNFTList = expressAsyncHandler(async (req, res) => {
     const nfts = await NFT.find(query)
         .skip(skip)
         .limit(limit)
-
+        .sort({ createdAt: -1 })
 
     const total = await NFT.countDocuments(query);
 
