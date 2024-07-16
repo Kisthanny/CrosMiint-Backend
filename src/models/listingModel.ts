@@ -1,9 +1,8 @@
 import mongoose, { Document, Schema } from "mongoose";
-import { INFT } from "./nftModel";
 import { IUser } from "./userModel";
+import { INFT } from "./nftModel";
 import { INetwork } from "./networkModel";
-import { IOffer, offerSchema } from "./OfferModel";
-
+import { IOffer } from "./OfferModel";
 
 export enum ListingStatus {
     Listed = 'Listed',
@@ -18,7 +17,7 @@ export interface IListing extends Document {
     nft: INFT['_id'];
     status: ListingStatus;
     listAmount: string;
-    offers: IOffer[];
+    offers: IOffer['_id'][];
     network: INetwork['_id'];
     createdAt: Date;
     updatedAt: Date;
@@ -32,7 +31,7 @@ const listingSchema: Schema<IListing> = new mongoose.Schema(
         nft: { type: mongoose.Schema.Types.ObjectId, ref: 'NFT', required: true },
         status: { type: String, enum: Object.values(ListingStatus), required: true },
         listAmount: { type: String, required: true },
-        offers: [offerSchema],
+        offers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Offer' }],
         network: { type: mongoose.Schema.Types.ObjectId, ref: "Network", required: true },
     },
     {

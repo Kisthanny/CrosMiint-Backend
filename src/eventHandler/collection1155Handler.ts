@@ -2,9 +2,10 @@ import Collection from "../models/collectionModel";
 import NFT, { MetadataType } from "../models/nftModel";
 import { findOrCreateUser } from "../controller/userController";
 import { Types } from "mongoose";
+import { getCollection } from "./collection721Handler";
 
-export const tokenMinted = async (address: string, tokenId: bigint, tokenURI: string, amount: bigint, holder: string) => {
-    const collection = await Collection.findOne({ address: address.toLocaleLowerCase() });
+export const tokenMinted = async (address: string, networkId: number, tokenId: bigint, tokenURI: string, amount: bigint, holder: string) => {
+    const collection = await getCollection(address, networkId);
 
     if (!collection) {
         throw new Error(`Invalid Collection ${address}`);
@@ -40,8 +41,8 @@ export const tokenMinted = async (address: string, tokenId: bigint, tokenURI: st
     }
 };
 
-export const tokenBurned = async (contractAddress: string, tokenId: bigint, amount: bigint, senderAddress: string) => {
-    const collection = await Collection.findOne({ address: contractAddress.toLocaleLowerCase() });
+export const tokenBurned = async (contractAddress: string, networkId: number, tokenId: bigint, amount: bigint, senderAddress: string) => {
+    const collection = await getCollection(contractAddress, networkId);
 
     if (!collection) {
         throw new Error(`Invalid Collection ${contractAddress}`);
@@ -78,8 +79,8 @@ export const tokenBurned = async (contractAddress: string, tokenId: bigint, amou
     await nft.save();
 };
 
-export const crosschainAddressSet = async (address: string, network: bigint, contractAddress: string) => {
-    const collection = await Collection.findOne({ address: address.toLocaleLowerCase() });
+export const crosschainAddressSet = async (address: string, networkId: number, network: bigint, contractAddress: string) => {
+    const collection = await getCollection(address, networkId);
 
     if (!collection) {
         throw new Error(`Invalid Collection ${address}`)

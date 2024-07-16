@@ -58,7 +58,7 @@ export const getCollections = expressAsyncHandler(async (req, res) => {
     }
     const getOwner = async () => {
         if (creator) {
-            const result = await User.findOne({ address: creator });
+            const result = await User.findOne({ address: (creator as string).toLowerCase() });
             return result?._id || undefined;
         }
         return undefined;
@@ -79,7 +79,7 @@ export const getCollections = expressAsyncHandler(async (req, res) => {
     const query: any = {}
     if (owner) { query.owner = owner }
     if (deployedAt) { query.deployedAt = deployedAt }
-    if (address) { query.address = address }
+    if (address) { query.address = { $regex: address, $options: 'i' } }
     if (protocol) { query.protocol = protocol }
     if (category) { query.category = category }
     if (name) { query.name = { $regex: name, $options: 'i' } }
@@ -98,6 +98,33 @@ export const getCollections = expressAsyncHandler(async (req, res) => {
         page,
         pages: Math.ceil(total / limit),
     })
+})
+
+export const getCollectionInfo = expressAsyncHandler(async (req, res) => {
+    const { address, networkId } = req.query;
+    if (!address || !networkId) {
+        res.status(400);
+        throw new Error("missing argument");
+    }
+
+    const network = await Network.findOne({ networkId });
+    if (!network) {
+        res.status(400);
+        throw new Error(`Invalid Network ${networkId}`);
+    }
+
+    const collection = await Collection.findOne({
+        address: (address as string).toLowerCase(),
+        deployedAt: network._id,
+    })
+        .populate("owner", "address name avatar")
+        .populate("deployedAt", "networkId chainName")
+    if (!collection) {
+        res.status(400);
+        throw new Error(`Invalid Collection ${address} in Network ${networkId}`);
+    }
+
+    res.status(200).json(formatDocument(collection));
 })
 
 export const updateCategory = expressAsyncHandler(async (req: ValidatedRequest, res) => {

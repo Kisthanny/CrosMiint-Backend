@@ -26,7 +26,7 @@ const startPolling1155 = async (address: string, networkId: number) => {
             if (!transactionHashCache.has(txHash)) {
                 logger(`new event: ${event.eventName}`);
                 transactionHashCache.add(address, txHash);
-                await tokenMinted.bind(null, address).apply(null, event.args);
+                await tokenMinted.bind(null, address, networkId).apply(null, event.args);
             }
         }
 
@@ -36,7 +36,7 @@ const startPolling1155 = async (address: string, networkId: number) => {
             if (!transactionHashCache.has(txHash)) {
                 logger(`new event: ${event.eventName}`);
                 transactionHashCache.add(address, txHash);
-                await tokenBurned.bind(null, address).apply(null, event.args);
+                await tokenBurned.bind(null, address, networkId).apply(null, event.args);
             }
         }
 
@@ -46,7 +46,7 @@ const startPolling1155 = async (address: string, networkId: number) => {
             if (!transactionHashCache.has(txHash)) {
                 logger(`new event: ${event.eventName}`);
                 transactionHashCache.add(address, txHash);
-                await crosschainAddressSet.bind(null, address).apply(null, event.args);
+                await crosschainAddressSet.bind(null, address, networkId).apply(null, event.args);
             }
         }
 

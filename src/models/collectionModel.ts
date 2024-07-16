@@ -28,7 +28,7 @@ export interface ICollection extends Document {
     deployedAt: INetwork;
     isBase: boolean;
     category?: Category;
-    airdrops?: IAirdrop['_id'][];
+    airdrops: IAirdrop['_id'][];
     previewImage?: string;
     networks: { networkId: number; networkCollection: string }[];
     baseURI?: string;
@@ -40,7 +40,7 @@ export interface ICollection extends Document {
 // 创建 collectionSchema
 const collectionSchema: Schema<ICollection> = new mongoose.Schema(
     {
-        address: { type: String, trim: true, unique: true, required: true },
+        address: { type: String, trim: true, required: true },
         owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
         logoURI: { type: String, trim: true, required: true },
         name: { type: String, trim: true, required: true },

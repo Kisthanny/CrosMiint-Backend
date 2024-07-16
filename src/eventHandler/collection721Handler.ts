@@ -4,9 +4,29 @@ import { blockTimeToDate } from "../util/blockchainService";
 import NFT, { MetadataType } from "../models/nftModel";
 import { findOrCreateUser } from "../controller/userController";
 import { Types } from "mongoose";
+import Network from "../models/networkModel";
+
+export const getCollection = async (address: string, networkId: number) => {
+    const network = await Network.findOne({ networkId });
+    if (!network) {
+        throw new Error(`Invalid network ${networkId}`)
+    }
+
+    const collection = await Collection.findOne({
+        address: address.toLocaleLowerCase(),
+        deployedAt: network._id,
+    });
+
+    if (!collection) {
+        throw new Error(`Invalid Collection ${address}`)
+    }
+
+    return collection;
+}
 
 export const dropCreated = async (
     address: string,
+    networkId: number,
     dropId: bigint,
     supply: bigint,
     mintLimitPerWallet: bigint,
@@ -17,9 +37,9 @@ export const dropCreated = async (
     whiteListEndTime: bigint,
     whiteListPrice: bigint,
 ) => {
-    const collection = await Collection.findOne({ address: address.toLocaleLowerCase() });
+    const collection = await getCollection(address, networkId);
 
-    await Airdrop.create({
+    const airdrop = await Airdrop.create({
         fromCollection: collection,
         dropIndex: dropId.toString(),
         supply: supply.toString(),
@@ -32,6 +52,9 @@ export const dropCreated = async (
         whiteListPrice: whiteListPrice.toString(),
         mintLimitPerWallet: mintLimitPerWallet.toString(),
     })
+
+    collection.airdrops.push(airdrop);
+    await collection.save();
 }
 
 const createNFT = async (tokenId: string, collection: ICollection, userId: Types.ObjectId) => {
@@ -46,8 +69,8 @@ const createNFT = async (tokenId: string, collection: ICollection, userId: Types
     });
 };
 
-export const tokenMinted = async (address: string, tokenId: bigint, amount: bigint, holderAddress: string) => {
-    const collection = await Collection.findOne({ address: address.toLocaleLowerCase() });
+export const tokenMinted = async (address: string, networkId: number, tokenId: bigint, amount: bigint, holderAddress: string, isFromDrop: boolean) => {
+    const collection = await getCollection(address, networkId);
 
     if (!collection) {
         throw new Error(`Invalid Collection ${address}`)
@@ -63,10 +86,23 @@ export const tokenMinted = async (address: string, tokenId: bigint, amount: bigi
 
     const newNFTs = await Promise.all(createNFTPromises);
     await NFT.insertMany(newNFTs);
+
+    if (!isFromDrop) {
+        return;
+    }
+    const latestDrop = await Airdrop.find({
+        fromCollection: collection._id,
+    }).sort({ createdAt: -1 }).findOne();
+
+    if (!latestDrop) {
+        throw new Error("Invalid latest Airdrop");
+    }
+    latestDrop.minted = (BigInt(latestDrop.minted) + amount).toString();
+    await latestDrop.save();
 }
 
-export const baseURISet = async (address: string, baseURI: string) => {
-    const collection = await Collection.findOne({ address: address.toLocaleLowerCase() });
+export const baseURISet = async (address: string, networkId: number, baseURI: string) => {
+    const collection = await getCollection(address, networkId);
 
     if (!collection) {
         throw new Error(`Invalid Collection ${address}`)
@@ -92,8 +128,8 @@ export const baseURISet = async (address: string, baseURI: string) => {
     await NFT.bulkWrite(bulkOps);
 }
 
-export const tokenBurned = async (address: string, tokenId: bigint, burner: string) => {
-    const collection = await Collection.findOne({ address: address.toLocaleLowerCase() });
+export const tokenBurned = async (address: string, networkId: number, tokenId: bigint, burner: string) => {
+    const collection = await getCollection(address, networkId);
 
     if (!collection) {
         throw new Error(`Invalid Collection ${address}`)
@@ -102,8 +138,8 @@ export const tokenBurned = async (address: string, tokenId: bigint, burner: stri
     await NFT.findOneAndDelete({ fromCollection: collection._id, tokenId: tokenId.toString() })
 }
 
-export const crosschainAddressSet = async (address: string, network: bigint, contractAddress: string) => {
-    const collection = await Collection.findOne({ address: address.toLocaleLowerCase() });
+export const crosschainAddressSet = async (address: string, networkId: number, network: bigint, contractAddress: string) => {
+    const collection = await getCollection(address, networkId);
 
     if (!collection) {
         throw new Error(`Invalid Collection ${address}`)

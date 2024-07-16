@@ -5,7 +5,7 @@ import NFT, { MetadataType } from "../models/nftModel";
 import { findOrCreateUser } from "../controller/userController";
 import Listing, { IListing, ListingStatus } from "../models/listingModel";
 import Network from "../models/networkModel";
-import { Types } from "mongoose";
+import { ObjectId, Types } from "mongoose";
 import Offer from "../models/OfferModel";
 
 async function updateListingAndNFT(
@@ -80,7 +80,7 @@ export const listed = async (
         throw new Error(`Invalid NFT ${contractAddress}/${tokenId}`)
     }
 
-    await Listing.create({
+    const listing = await Listing.create({
         listingId: listingId.toString(),
         seller,
         price: price.toString(),
@@ -90,6 +90,9 @@ export const listed = async (
         offers: [],
         network: collection.deployedAt,
     });
+
+    nft.latestMarket = listing._id;
+    await nft.save();
 }
 
 export const cancelled = async (networkId: number, listingId: bigint) => {
@@ -156,13 +159,15 @@ export const offerMade = async (
 
     const user = await findOrCreateUser(offerer.toLowerCase());
 
-    await Offer.create({
+    const offer = await Offer.create({
         offerIndex: offerIndex.toString(),
         offerer: user,
         price: offerPrice.toString(),
         amount: amount.toString(),
         fromListing: listing,
     });
+    listing.offers.push(offer);
+    await listing.save();
 }
 
 export const offerAccepted = async (
@@ -232,10 +237,9 @@ export const offerCancelled = async (
         throw new Error(`Invalid Offer ${listingId}/${offerIndex}`);
     }
 
-    const deleteIndex = listing.offers.findIndex(e => e === offer._id);
+    const deleteIndex = listing.offers.findIndex(e => (e as ObjectId).toString() === (offer._id as ObjectId).toString());
     if (deleteIndex !== -1) {
         listing.offers.splice(deleteIndex, 1);
+        await listing.save();
     }
-
-    await listing.save();
 }

@@ -1,89 +1,13 @@
 import expressAsyncHandler from "express-async-handler";
-import { ethers } from "ethers";
-import Network from "../models/networkModel";
-import { ValidatedRequest } from "../middleware/authMiddleware";
 import Collection, { Protocol, Category } from "../models/collectionModel";
-import User from "../models/userModel";
-import { blockTimeToDate, getBlockTime, getContract } from "../util/blockchainService";
 import { formatDocument } from "../util/responseFormatter";
 import Airdrop from "../models/airdropModel";
-import { Collection721 } from "../types";
+import Network from "../models/networkModel";
 const AIRDROP_STAGES = ["upcoming", "finished"];
 type StageType = "upcoming" | "finished";
-// creates the current airdrop of the given collection
-export const createAirdrop = expressAsyncHandler(async (req, res) => {
-    const { address: rawAddress } = req.body;
-    const address = (rawAddress as string).toLocaleLowerCase();
-
-    if (!address) {
-        res.status(400);
-        throw new Error("missing argument");
-    }
-
-    const collection = await Collection.findOne({ address }).populate("deployedAt", "networkId");
-    if (!collection) {
-        res.status(400);
-        throw new Error(`Collection ${address} does not exist`);
-    }
-
-    if (collection.protocol !== Protocol.ERC721) {
-        res.status(400);
-        throw new Error("only ERC721 can drop")
-    }
-
-    const contract = getContract({
-        address: address,
-        protocol: Protocol.ERC721,
-        networkId: collection.deployedAt.networkId,
-    }) as Collection721;
-
-    const currentDrop = await contract.currentDrop();
-
-    const currentTime = await getBlockTime(collection.deployedAt.networkId);
-
-    if (currentDrop.endTime <= currentTime) {
-        res.status(400);
-        throw new Error("No ongoing airdrop");
-    }
-
-    const dropIndex = currentDrop.dropId.toString();
-    const supply = currentDrop.supply.toString();
-    const minted = currentDrop.minted.toString();
-    const mintLimitPerWallet = currentDrop.mintLimitPerWallet.toString();
-    const price = currentDrop.price.toString();
-    const hasWhiteListPhase = currentDrop.hasWhiteListPhase;
-    const whiteListPrice = currentDrop.whiteListPrice.toString();
-    const startTime = blockTimeToDate(currentDrop.startTime);
-    const endTime = blockTimeToDate(currentDrop.endTime);
-    const whiteListEndTime = blockTimeToDate(currentDrop.whiteListEndTime);
-
-    const exist = await Airdrop.exists({ fromCollection: collection, dropIndex });
-    if (exist) {
-        res.status(400);
-        throw new Error("airdrop already exists");
-    }
-
-    const newAirdrop = await Airdrop.create({
-        fromCollection: collection,
-        dropIndex,
-        supply,
-        minted,
-        startTime,
-        endTime,
-        price,
-        hasWhiteListPhase,
-        whiteListEndTime,
-        whiteListPrice,
-        mintLimitPerWallet
-    })
-
-    const airdrop = await newAirdrop.populate("fromCollection", "address name symbol");
-
-    res.status(200).json(formatDocument(airdrop));
-})
 
 export const getAirdropList = expressAsyncHandler(async (req, res) => {
-    const { address: rawAddress, stage, networkId, category, pageNum = 1, pageSize = 10 } = req.query;
+    const { address: rawAddress, networkId, stage, pageNum = 1, pageSize = 10 } = req.query;
 
     const limit = parseInt(pageSize as string, 10);
     const page = parseInt(pageNum as string, 10);
@@ -91,12 +15,17 @@ export const getAirdropList = expressAsyncHandler(async (req, res) => {
 
     const query: any = {};
 
-    if (rawAddress) {
+    if (rawAddress && networkId) {
         const address = (rawAddress as string).toLocaleLowerCase();
-        const collection = await Collection.findOne({ address });
+        const network = await Network.findOne({ networkId });
+        if (!network) {
+            res.status(400);
+            throw new Error(`Invalid Network ${networkId}`);
+        }
+        const collection = await Collection.findOne({ address, deployedAt: network._id });
         if (!collection) {
             res.status(400);
-            throw new Error(`Invalid Collection ${address}`);
+            throw new Error(`Invalid Collection ${address} in Network${networkId}`);
         }
         query.fromCollection = collection._id;
     }
@@ -123,7 +52,7 @@ export const getAirdropList = expressAsyncHandler(async (req, res) => {
         .limit(limit)
         .populate({
             path: "fromCollection",
-            select: "address owner logoURI name deployedAt",
+            select: "address owner logoURI name deployedAt previewImage",
             populate: [
                 {
                     path: "owner",
@@ -131,7 +60,7 @@ export const getAirdropList = expressAsyncHandler(async (req, res) => {
                 },
                 {
                     path: "deployedAt",
-                    select: "chainName",
+                    select: "chainName networkId",
                 },
             ],
         })
@@ -145,3 +74,50 @@ export const getAirdropList = expressAsyncHandler(async (req, res) => {
         pages,
     });
 });
+
+export const getAirdropInfo = expressAsyncHandler(async (req, res) => {
+    const { address: rawAddress, networkId, dropIndex } = req.query;
+
+    if (!rawAddress || !networkId || !dropIndex) {
+        res.status(400);
+        throw new Error("missing argument");
+    }
+
+    const address = (rawAddress as string).toLocaleLowerCase();
+    const network = await Network.findOne({ networkId });
+    if (!network) {
+        res.status(400);
+        throw new Error(`Invalid Network ${networkId}`);
+    }
+    const collection = await Collection.findOne({ address, deployedAt: network._id });
+    if (!collection) {
+        res.status(400);
+        throw new Error(`Invalid Collection ${address} in Network${networkId}`);
+    }
+
+    const airdrop = await Airdrop.findOne({
+        fromCollection: collection._id,
+        dropIndex,
+    })
+        .populate({
+            path: "fromCollection",
+            select: "address owner logoURI name deployedAt previewImage",
+            populate: [
+                {
+                    path: "owner",
+                    select: "name",
+                },
+                {
+                    path: "deployedAt",
+                    select: "chainName networkId",
+                },
+            ],
+        })
+
+    if (!airdrop) {
+        res.status(400);
+        throw new Error(`Invalid Airdrop ${dropIndex} in Collection ${rawAddress}`);
+    }
+
+    res.status(200).json(formatDocument(airdrop));
+})

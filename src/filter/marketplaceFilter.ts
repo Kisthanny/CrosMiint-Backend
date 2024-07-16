@@ -92,7 +92,7 @@ const startPollingMarketplace = async (address: string, networkId: number) => {
         for (const event of offerCancelledEvents) {
             const txHash = event.transactionHash;
             if (!transactionHashCache.has(txHash)) {
-                logger(`new event: ${event.eventName}`);
+                logger(`new event: ${event.eventName} ${txHash}`);
                 transactionHashCache.add(address, txHash);
                 await offerCancelled.bind(null, networkId).apply(null, event.args);
             }
