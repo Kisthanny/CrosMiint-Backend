@@ -47,8 +47,10 @@ export const findOrCreateCollection = async (address: string, contract: Collecti
 
 export const getEndBlock = (startBlock: number, currentBlock: number) => {
     if (currentBlock - startBlock < 30) {
+        logger("up to date");
         return currentBlock;
     } else {
+        logger(`remaining unfiltered blocks: ${currentBlock - startBlock}`,"unfilteredBlocks");
         return startBlock + 30;
     }
 }
