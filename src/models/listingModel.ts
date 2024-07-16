@@ -2,7 +2,7 @@ import mongoose, { Document, Schema } from "mongoose";
 import { IUser } from "./userModel";
 import { INFT } from "./nftModel";
 import { INetwork } from "./networkModel";
-import { IOffer } from "./OfferModel";
+import { IOffer } from "./offerModel";
 
 export enum ListingStatus {
     Listed = 'Listed',

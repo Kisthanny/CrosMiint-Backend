@@ -6,7 +6,7 @@ import { findOrCreateUser } from "../controller/userController";
 import Listing, { IListing, ListingStatus } from "../models/listingModel";
 import Network from "../models/networkModel";
 import { ObjectId, Types } from "mongoose";
-import Offer from "../models/OfferModel";
+import Offer from "../models/offerModel";
 
 async function updateListingAndNFT(
     listing: IListing,
