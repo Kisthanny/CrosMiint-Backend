@@ -5,12 +5,13 @@ import { crosschainAddressSet, tokenBurned, tokenMinted } from "../eventHandler/
 import { findOrCreateCollection, getEndBlock } from "./collection721Filter";
 import TransactionHashCache from "../util/transactionHash";
 import logger from "../util/logger";
+import { retry } from "../util/retry";
 
 const startPolling1155 = async (address: string, networkId: number) => {
     console.log(`start polling for ${address}`);
     const contract = getContract({ protocol: Protocol.ERC1155, address, networkId }) as Collection1155;
 
-    const collection = await findOrCreateCollection(address, contract, networkId, Protocol.ERC1155);
+    const collection = await retry(() => findOrCreateCollection(address, contract, networkId, Protocol.ERC1155));
 
     const transactionHashCache = new TransactionHashCache(100);
     await transactionHashCache.loadFromDatabase(address);
@@ -20,7 +21,7 @@ const startPolling1155 = async (address: string, networkId: number) => {
         // filter all required events
         const endBlock = getEndBlock(collection.lastFilterBlock, currentBlock);
 
-        const tokenMintedEvents = await contract.queryFilter(contract.filters.TokenMinted, collection.lastFilterBlock, endBlock);
+        const tokenMintedEvents = await retry(() => contract.queryFilter(contract.filters.TokenMinted, collection.lastFilterBlock, endBlock));
         for (const event of tokenMintedEvents) {
             const txHash = event.transactionHash;
             if (!transactionHashCache.has(txHash)) {
@@ -30,7 +31,7 @@ const startPolling1155 = async (address: string, networkId: number) => {
             }
         }
 
-        const tokenBurnedEvents = await contract.queryFilter(contract.filters.TokenBurned, collection.lastFilterBlock, endBlock);
+        const tokenBurnedEvents = await retry(() => contract.queryFilter(contract.filters.TokenBurned, collection.lastFilterBlock, endBlock));
         for (const event of tokenBurnedEvents) {
             const txHash = event.transactionHash;
             if (!transactionHashCache.has(txHash)) {
@@ -40,7 +41,7 @@ const startPolling1155 = async (address: string, networkId: number) => {
             }
         }
 
-        const crosschainAddressSetEvents = await contract.queryFilter(contract.filters.CrosschainAddressSet, collection.lastFilterBlock, endBlock);
+        const crosschainAddressSetEvents = await retry(() => contract.queryFilter(contract.filters.CrosschainAddressSet, collection.lastFilterBlock, endBlock));
         for (const event of crosschainAddressSetEvents) {
             const txHash = event.transactionHash;
             if (!transactionHashCache.has(txHash)) {

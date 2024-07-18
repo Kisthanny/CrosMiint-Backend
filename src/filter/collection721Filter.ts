@@ -6,6 +6,7 @@ import { findOrCreateUser } from "../controller/userController";
 import Network from "../models/networkModel";
 import TransactionHashCache from "../util/transactionHash";
 import logger from "../util/logger";
+import { retry } from "../util/retry";
 
 export const findOrCreateCollection = async (address: string, contract: Collection721 | Collection1155, networkId: number | string, protocol: Protocol) => {
     const collection = await Collection.findOne({ address });
@@ -16,11 +17,11 @@ export const findOrCreateCollection = async (address: string, contract: Collecti
 
     const promiseList =
         [
-            contract.owner(),
-            contract.name(),
-            contract.symbol(),
-            contract.logoURI(),
-            contract.isBase(),
+            retry(contract.owner),
+            retry(contract.name),
+            retry(contract.symbol),
+            retry(contract.logoURI),
+            retry(contract.isBase),
         ]
 
     const [owner, name, symbol, logoURI, isBase] = await Promise.all(promiseList);
@@ -70,7 +71,7 @@ const startPolling721 = async (address: string, networkId: number) => {
         // filter all required events
         const endBlock = getEndBlock(collection.lastFilterBlock, currentBlock);
 
-        const dropCreatedEvents = await contract.queryFilter(contract.filters.DropCreated, collection.lastFilterBlock, endBlock);
+        const dropCreatedEvents = await retry(() => contract.queryFilter(contract.filters.DropCreated, collection.lastFilterBlock, endBlock));
         for (const event of dropCreatedEvents) {
             const txHash = event.transactionHash;
             if (!transactionHashCache.has(txHash)) {
@@ -80,7 +81,7 @@ const startPolling721 = async (address: string, networkId: number) => {
             }
         }
 
-        const tokenMintedEvents = await contract.queryFilter(contract.filters.TokenMinted, collection.lastFilterBlock, endBlock);
+        const tokenMintedEvents = await retry(() => contract.queryFilter(contract.filters.TokenMinted, collection.lastFilterBlock, endBlock));
         for (const event of tokenMintedEvents) {
             const txHash = event.transactionHash;
             if (!transactionHashCache.has(txHash)) {
@@ -90,7 +91,7 @@ const startPolling721 = async (address: string, networkId: number) => {
             }
         }
 
-        const baseURISetEvents = await contract.queryFilter(contract.filters.BaseURISet, collection.lastFilterBlock, endBlock);
+        const baseURISetEvents = await retry(() => contract.queryFilter(contract.filters.BaseURISet, collection.lastFilterBlock, endBlock));
         for (const event of baseURISetEvents) {
             const txHash = event.transactionHash;
             if (!transactionHashCache.has(txHash)) {
@@ -100,7 +101,7 @@ const startPolling721 = async (address: string, networkId: number) => {
             }
         }
 
-        const tokenBurnedEvents = await contract.queryFilter(contract.filters.TokenBurned, collection.lastFilterBlock, endBlock);
+        const tokenBurnedEvents = await retry(() => contract.queryFilter(contract.filters.TokenBurned, collection.lastFilterBlock, endBlock));
         for (const event of tokenBurnedEvents) {
             const txHash = event.transactionHash;
             if (!transactionHashCache.has(txHash)) {
@@ -110,7 +111,7 @@ const startPolling721 = async (address: string, networkId: number) => {
             }
         }
 
-        const crosschainAddressSetEvents = await contract.queryFilter(contract.filters.CrosschainAddressSet, collection.lastFilterBlock, endBlock);
+        const crosschainAddressSetEvents = await retry(() => contract.queryFilter(contract.filters.CrosschainAddressSet, collection.lastFilterBlock, endBlock));
         for (const event of crosschainAddressSetEvents) {
             const txHash = event.transactionHash;
             if (!transactionHashCache.has(txHash)) {

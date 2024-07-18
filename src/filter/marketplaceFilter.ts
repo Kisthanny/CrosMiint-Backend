@@ -5,6 +5,7 @@ import { bought, cancelled, listed, offerAccepted, offerCancelled, offerMade } f
 import { getEndBlock } from "./collection721Filter";
 import TransactionHashCache from "../util/transactionHash";
 import logger from "../util/logger";
+import { retry } from "../util/retry";
 
 const findOrCreateMarketplace = async (address: string, networkId: number | string) => {
     const marketplace = await Marketplace.findOne({ address });
@@ -38,7 +39,7 @@ const startPollingMarketplace = async (address: string, networkId: number) => {
         // filter all required events
         const endBlock = getEndBlock(marketplace.lastFilterBlock, currentBlock);
 
-        const listedEvents = await contract.queryFilter(contract.filters.Listed, marketplace.lastFilterBlock, endBlock);
+        const listedEvents = await retry(() => contract.queryFilter(contract.filters.Listed, marketplace.lastFilterBlock, endBlock));
         for (const event of listedEvents) {
             const txHash = event.transactionHash;
             if (!transactionHashCache.has(txHash)) {
@@ -48,7 +49,7 @@ const startPollingMarketplace = async (address: string, networkId: number) => {
             }
         }
 
-        const cancelledEvents = await contract.queryFilter(contract.filters.Cancelled, marketplace.lastFilterBlock, endBlock);
+        const cancelledEvents = await retry(() => contract.queryFilter(contract.filters.Cancelled, marketplace.lastFilterBlock, endBlock));
         for (const event of cancelledEvents) {
             const txHash = event.transactionHash;
             if (!transactionHashCache.has(txHash)) {
@@ -58,7 +59,7 @@ const startPollingMarketplace = async (address: string, networkId: number) => {
             }
         }
 
-        const boughtEvents = await contract.queryFilter(contract.filters.Bought, marketplace.lastFilterBlock, endBlock);
+        const boughtEvents = await retry(() => contract.queryFilter(contract.filters.Bought, marketplace.lastFilterBlock, endBlock));
         for (const event of boughtEvents) {
             const txHash = event.transactionHash;
             if (!transactionHashCache.has(txHash)) {
@@ -68,7 +69,7 @@ const startPollingMarketplace = async (address: string, networkId: number) => {
             }
         }
 
-        const offerMadeEvents = await contract.queryFilter(contract.filters.OfferMade, marketplace.lastFilterBlock, endBlock);
+        const offerMadeEvents = await retry(() => contract.queryFilter(contract.filters.OfferMade, marketplace.lastFilterBlock, endBlock));
         for (const event of offerMadeEvents) {
             const txHash = event.transactionHash;
             if (!transactionHashCache.has(txHash)) {
@@ -78,7 +79,7 @@ const startPollingMarketplace = async (address: string, networkId: number) => {
             }
         }
 
-        const offerAcceptedEvents = await contract.queryFilter(contract.filters.OfferAccepted, marketplace.lastFilterBlock, endBlock);
+        const offerAcceptedEvents = await retry(() => contract.queryFilter(contract.filters.OfferAccepted, marketplace.lastFilterBlock, endBlock));
         for (const event of offerAcceptedEvents) {
             const txHash = event.transactionHash;
             if (!transactionHashCache.has(txHash)) {
@@ -88,7 +89,7 @@ const startPollingMarketplace = async (address: string, networkId: number) => {
             }
         }
 
-        const offerCancelledEvents = await contract.queryFilter(contract.filters.OfferCancelled, marketplace.lastFilterBlock, endBlock);
+        const offerCancelledEvents = await retry(() => contract.queryFilter(contract.filters.OfferCancelled, marketplace.lastFilterBlock, endBlock));
         for (const event of offerCancelledEvents) {
             const txHash = event.transactionHash;
             if (!transactionHashCache.has(txHash)) {

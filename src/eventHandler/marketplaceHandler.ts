@@ -1,7 +1,5 @@
-import Collection, { ICollection } from "../models/collectionModel";
-import Airdrop from "../models/airdropModel";
-import { blockTimeToDate } from "../util/blockchainService";
-import NFT, { MetadataType } from "../models/nftModel";
+import Collection from "../models/collectionModel";
+import NFT from "../models/nftModel";
 import { findOrCreateUser } from "../controller/userController";
 import Listing, { IListing, ListingStatus } from "../models/listingModel";
 import Network from "../models/networkModel";

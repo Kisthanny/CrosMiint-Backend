@@ -1,8 +1,6 @@
 import expressAsyncHandler from "express-async-handler";
-import Collection, { Protocol } from "../models/collectionModel";
-import { getContract } from "../util/blockchainService";
+import Collection from "../models/collectionModel";
 import { formatDocument } from "../util/responseFormatter";
-import { Collection721, Collection1155 } from "../types";
 import NFT, { MetadataType } from "../models/nftModel";
 import User from "../models/userModel";
 import Network from "../models/networkModel";

@@ -1,4 +1,3 @@
-import Collection from "../models/collectionModel";
 import NFT, { MetadataType } from "../models/nftModel";
 import { findOrCreateUser } from "../controller/userController";
 import { Types } from "mongoose";

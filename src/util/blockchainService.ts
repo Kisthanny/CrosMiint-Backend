@@ -3,9 +3,7 @@ import { rpcUrls, wsUrls } from "../config/rpcUrls";
 import abi from "../config/abi";
 import { Protocol } from "../models/collectionModel";
 import { Collection721, Collection1155, NFTMarketplace } from "../types";
-import NFTMarketplaceArtifacts from "../../artifacts/contracts/NFTMarketplace.sol/NFTMarketplace.json";
-import Marketplace from "../models/marketplaceModel";
-import Network from "../models/networkModel";
+import { retry } from "./retry";
 
 export interface BlockchainServiceOptions {
     protocol: Protocol;
@@ -51,9 +49,9 @@ export const getMarketplaceContract = (address: string, networkId: string | numb
 
 export const getBlockTime = async (networkId: number) => {
     const provider = getProvider(networkId);
-    const block = await provider.getBlock("latest");
+    const block = await retry(() => provider.getBlock("latest"));
     if (!block) {
-        throw new Error()
+        throw new Error("no block")
     }
     return block.timestamp;
 }
@@ -61,7 +59,9 @@ export const getBlockTime = async (networkId: number) => {
 export const getBlockNumber = async (networkId: number) => {
     const provider = getProvider(networkId);
 
-    return await provider.getBlockNumber()
+    return retry(async () => {
+        return await provider.getBlockNumber()
+    });
 }
 
 export const blockTimeToDate = (blockTime: number | bigint): Date => {
