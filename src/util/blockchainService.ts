@@ -80,3 +80,22 @@ export const blockTimeToDate = (blockTime: number | bigint): Date => {
     }
     return new Date(timeInMillis); // Already in milliseconds
 };
+
+export const convertAddress = (hexAddress: string, isContract: boolean = false) => {
+    let address: string;
+    if (hexAddress.length === 42) {
+        address = hexAddress.slice(2);
+    } else {
+        address = hexAddress;
+    }
+
+    if (address.length !== 40) {
+        throw new Error("expecting a 20 bytes long hex string");
+    }
+
+    if (isContract) {
+        address = `1${address}`;
+    }
+
+    return `0x${address.padStart(64, "0")}`;
+}
