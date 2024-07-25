@@ -5,12 +5,8 @@ import FormData from "form-data";
 import fs from "fs";
 import path from "path";
 import rfs from "recursive-fs"
-import basePathConverter from "base-path-converter";
-import Collection, { Protocol } from "../models/collectionModel";
-import { getContract } from "../util/blockchainService";
-import { Collection721 } from "../types";
+import csv from "csv-parser";
 import { ValidatedRequest } from "../middleware/authMiddleware";
-import { IUser } from "../models/userModel";
 
 export interface CreateGroupRes {
     id: string;
@@ -20,28 +16,23 @@ export interface CreateGroupRes {
     createdAt: string;
 }
 
+interface JsonMetadata {
+    ipfsHash: string;
+    mimetype: string;
+    ext: string;
+    name: string;
+    description: string;
+    traits: {
+        [key: string]: string
+    }
+}
+
 const storage = multer.diskStorage({
     destination(req: ValidatedRequest, file, callback) {
-        const uploadPath = `uploads/${req.user?._id}`;
-
-        // 检查目录是否存在
-        fs.access(uploadPath, fs.constants.F_OK, (err) => {
-            if (!err) {
-                // 如果目录存在，返回错误
-                return callback(new Error('User already has an ongoing upload task.'), "");
-            }
-
-            // 如果目录不存在，创建目录
-            fs.mkdir(uploadPath, { recursive: true }, (err) => {
-                if (err) {
-                    return callback(err, "");
-                }
-                callback(null, uploadPath);
-            });
-        });
+        callback(null, `uploads/${req.user?._id}`);
     },
     filename(req, file, callback) {
-        callback(null, Date.now() + path.extname(file.originalname));
+        callback(null, file.originalname);
     },
 });
 
@@ -49,7 +40,7 @@ export const upload = multer({ storage });
 
 const JWT = process.env.PINATA_API!;
 
-const pinFileToIPFS = async (filePath: string, groupId: string) => {
+const pinFileToIPFS = async (filePath: string) => {
     const formData = new FormData();
     const file = fs.createReadStream(filePath);
 
@@ -62,7 +53,6 @@ const pinFileToIPFS = async (filePath: string, groupId: string) => {
 
     const pinataOptions = JSON.stringify({
         cidVersion: 0,
-        groupId,
     })
     formData.append('pinataOptions', pinataOptions);
 
@@ -79,14 +69,13 @@ const pinFileToIPFS = async (filePath: string, groupId: string) => {
     }
 };
 
-const pinJSONToIPFS = async (jsonString: string, groupId: string) => {
+const pinJSONToIPFS = async (jsonString: string) => {
     try {
         const pinataContent = JSON.parse(jsonString);
         const reqBody = {
             pinataContent,
             pinataOptions: {
                 cidVersion: 1,
-                groupId,
             },
             pinataMetadata: {
                 name: pinataContent.name,
@@ -104,39 +93,30 @@ const pinJSONToIPFS = async (jsonString: string, groupId: string) => {
     }
 };
 
-const pinDirectoryToPinata = async (src: string, groupId: string) => {
+const pinDirectoryToPinata = async (src: string) => {
     const url = `https://api.pinata.cloud/pinning/pinFileToIPFS`;
-    try {
+    const { dirs, files } = await rfs.read(src);
 
-        const { dirs, files } = await rfs.read(src);
+    const formData = new FormData();
 
-        console.log({ files })
-
-        const formData = new FormData();
-
-        for (const file of files) {
-            formData.append(`file`, fs.createReadStream(file), {
-                filepath: basePathConverter(src, file),
-            });
-        }
-
-        const pinataOptions = JSON.stringify({
-            cidVersion: 0,
-            groupId,
-        })
-        formData.append('pinataOptions', pinataOptions);
-        console.log({ formData })
-
-        const response = await axios.post(url, formData, {
-            headers: {
-                'Authorization': `Bearer ${JWT}`,
-            },
-        })
-
-        return response.data;
-    } catch (error) {
-        console.log(error);
+    for (const file of files) {
+        formData.append(`file`, fs.createReadStream(file), {
+            filepath: `jsonFiles/${path.basename(file)}`,
+        });
     }
+
+    const pinataOptions = JSON.stringify({
+        cidVersion: 0,
+    })
+    formData.append('pinataOptions', pinataOptions);
+
+    const response = await axios.post(url, formData, {
+        headers: {
+            'Authorization': `Bearer ${JWT}`,
+        },
+    })
+
+    return response.data;
 };
 
 export const getIPFSJSON = async (ipfsHash: string) => {
@@ -164,10 +144,8 @@ export const createGroup = async (address: string) => {
     return res.data as CreateGroupRes;
 }
 
-
 export const uploadMedia = expressAsyncHandler(async (req: ValidatedRequest, res, next) => {
     const file = req.file;
-    const { address } = req.body;
 
     if (!file) {
         res.status(400);
@@ -178,39 +156,12 @@ export const uploadMedia = expressAsyncHandler(async (req: ValidatedRequest, res
 
     try {
         const ext = path.extname(originalname);
-        if (!address) {
-            res.status(400);
-            throw new Error('missing argument');
-        }
 
-        const collection = await Collection.findOne({
-            address: (address as string).toLowerCase(),
-            isBase: true
-        }).populate("owner", "address");
-
-        if (!collection) {
-            res.status(400);
-            throw new Error("Collection is not base or does not exist");
-        }
-
-        const ownerAddress = (collection.owner as IUser).address;
-        if (ownerAddress.toLowerCase() !== req.user?.address.toLowerCase()) {
-            res.status(403);
-            throw new Error("Only owner can upload");
-        }
-
-        const ipfsGroupId = collection?.ipfsGroupId;
-        if (!ipfsGroupId) {
-            res.status(500);
-            throw new Error("Missing IPFS groupId");
-        }
-
-        const pinataResponse = await pinFileToIPFS(filePath, ipfsGroupId);
+        const pinataResponse = await pinFileToIPFS(filePath);
 
         res.json({
             ipfsHash: pinataResponse.IpfsHash,
             ipfsUrl: `https://gateway.pinata.cloud/ipfs/${pinataResponse.IpfsHash}`,
-            ipfsGroupId,
             mimetype,
             ext,
         });
@@ -224,8 +175,8 @@ export const uploadMedia = expressAsyncHandler(async (req: ValidatedRequest, res
 });
 
 export const uploadJSON = expressAsyncHandler(async (req, res) => {
-    const { ipfsHash, ipfsGroupId, name, ext, mimetype, description, traits = {} } = req.body;
-    if (!ipfsHash || !ipfsGroupId || !name || !ext || !mimetype || !description) {
+    const { ipfsHash, name, ext, mimetype, description, traits = {} } = req.body;
+    if (!ipfsHash || !name || !ext || !mimetype || !description) {
         res.status(400);
         throw new Error("missing argument");
     }
@@ -239,76 +190,107 @@ export const uploadJSON = expressAsyncHandler(async (req, res) => {
         traits,
     }
 
-    const data = await pinJSONToIPFS(JSON.stringify(content), ipfsGroupId);
+    const data = await pinJSONToIPFS(JSON.stringify(content));
     res.status(200).json(data)
 })
 
-export const uploadBatchMedia = expressAsyncHandler(async (req, res) => {
+export const uploadBatchMedia = expressAsyncHandler(async (req: ValidatedRequest, res, next) => {
     const files = req.files as Express.Multer.File[];
-    const { address } = req.body;
 
     if (!files || files.length === 0) {
         res.status(400);
-        throw new Error('No files uploaded');
+        return next(new Error('No files uploaded'));
     }
 
-    if (!address) {
-        res.status(400)
-        throw new Error('missing argument');
-    }
-
-    const collection = await Collection.findOne({ address, isBase: true }).populate("deployedAt", "networkId");
-    if (!collection) {
-        res.status(400)
-        throw new Error("Collection is not base or does not exist");
-    }
-    const ipfsGroupId = collection?.ipfsGroupId;
-    if (!ipfsGroupId) {
-        res.status(500)
-        throw new Error("Missing IPFS groupId");
-    }
-    // only ERC-721 can upload batch
-    const protocol = collection.protocol;
-    if (protocol !== Protocol.ERC721) {
-        res.status(400);
-        throw new Error("Unsupported Protocol for batch upload");
-    }
-
-    const contract = getContract({
-        protocol,
-        address,
-        networkId: collection.deployedAt.networkId,
-    }) as Collection721;
-    // files length should match minted count
-    const [totalMinted, baseURI] = await Promise.all([contract.totalMinted(), contract.baseURI()]);
-    if (files.length !== Number(totalMinted)) {
-        res.status(400);
-        throw new Error("upload file count should match minted count");
-    }
-    // baseURI should be empty string
-    if (baseURI) {
-        res.status(400);
-        throw new Error("Collection already uploaded");
-    }
-
-    let directoryPath = ""
+    const directoryPath = `uploads/${req.user?._id}`
+    const imageHashes: { [key: string]: string; } = {};
     try {
-        directoryPath = `uploads/${(address as string).toLowerCase()}`;
-        fs.mkdirSync(directoryPath);
+        for (const file of files) {
+            const data = await pinFileToIPFS(file.path);
+            imageHashes[file.originalname] = data.IpfsHash;
+        }
 
-        files.forEach((file, index) => {
-            fs.renameSync(file.path, path.join(directoryPath, `${index}${path.extname(file.originalname)}`));
-        });
-        const result = await pinDirectoryToPinata(directoryPath, ipfsGroupId);
-        res.status(200).json(result)
+        res.status(200).json({ message: 'Images uploaded successfully', imageHashes });
 
     } catch (error) {
-        res.status(500).send((error as Error).toString());
+        return next(error);
     } finally {
         // 删除本地文件和目录
-        fs.rmSync(directoryPath, { recursive: true });
+        fs.rmSync(directoryPath, { recursive: true, force: true });
     }
 })
+
+export const uploadCSV = expressAsyncHandler(async (req: ValidatedRequest, res, next) => {
+    const { imageHashes } = req.body;
+    const file = req.file;
+
+    if (!file) {
+        res.status(400);
+        return next(new Error('No file uploaded'));
+    }
+    const uploadDir = `uploads/${req.user?._id}`;
+    try {
+        const results: any[] = await new Promise((resolve, reject) => {
+            const resultData: any[] = [];
+
+            fs.createReadStream(file.path)
+                .pipe(csv())
+                .on('data', (data) => resultData.push(data))
+                .on('end', () => resolve(resultData))
+                .on('error', (err) => reject(err));
+        });
+
+        const jsonFiles: { [key: string]: JsonMetadata } = {};
+        const parsedImageHashes = JSON.parse(imageHashes as string);
+
+        results.forEach(row => {
+            const tokenId = row.tokenID;
+            const fileName = row.file_name;
+            const ipfsHash = parsedImageHashes[fileName]
+            if (!ipfsHash) {
+                throw new Error(`FileName ${fileName} Not Found`);
+            }
+
+            const traits: { [key: string]: string } = {};
+
+            for (const key in row) {
+                if (key.startsWith('attributes[') && key.endsWith(']')) {
+                    const traitType = key.slice(11, -1);
+                    traits[traitType] = row[key];
+                }
+            }
+
+            const jsonData: JsonMetadata = {
+                ipfsHash: parsedImageHashes[fileName],
+                mimetype: path.extname(fileName),
+                ext: path.extname(fileName),
+                name: row.name,
+                description: row.description,
+                traits
+            };
+
+            jsonFiles[tokenId] = jsonData;
+        });
+
+        const jsonDir = path.join(uploadDir, "/jsonFiles");
+        if (!fs.existsSync(jsonDir)) {
+            fs.mkdirSync(jsonDir, { recursive: true });
+        }
+
+        for (const [tokenId, jsonData] of Object.entries(jsonFiles)) {
+            fs.writeFileSync(path.join(jsonDir, `${tokenId}.json`), JSON.stringify(jsonData, null, 2));
+        }
+
+        // 将文件夹上传到IPFS
+        const result = await pinDirectoryToPinata(jsonDir);
+        res.status(200).json({ message: 'CSV processed successfully', folderIpfsHash: result.IpfsHash });
+    } catch (error) {
+        return next(error);
+    } finally {
+        // 删除包含文件的目录
+        fs.rmSync(uploadDir, { recursive: true, force: true });
+    }
+});
 
 export const adminCreateGroup = expressAsyncHandler(async (req, res) => {
     const { address } = req.body;
