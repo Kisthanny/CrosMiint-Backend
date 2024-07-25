@@ -25,18 +25,16 @@ export const createCollection = expressAsyncHandler(async (req: ValidatedRequest
         res.status(400);
         throw new Error("invalid protocol");
     }
-
-    const exist = await Collection.exists({ address })
-    if (exist) {
-        res.status(400);
-        throw new Error(`Collection ${address} already exists`);
-    }
-
-    const allNetworks = await Network.find();
-    const network = allNetworks.find(n => n.networkId === Number(deployedAt))
+    const network = await Network.findOne({ networkId: Number(deployedAt) })
     if (!network) {
         res.status(400);
         throw new Error("invalid deployedAt networkId");
+    }
+
+    const exist = await Collection.exists({ address, deployedAt: network._id })
+    if (exist) {
+        res.status(400);
+        throw new Error(`Collection ${address} already exists`);
     }
 
     if (protocol === Protocol.ERC721) {

@@ -1,9 +1,10 @@
 import expressAsyncHandler from "express-async-handler";
-import Collection from "../models/collectionModel";
+import Collection, { Protocol } from "../models/collectionModel";
 import { formatDocument } from "../util/responseFormatter";
 import NFT, { MetadataType } from "../models/nftModel";
 import User from "../models/userModel";
 import Network from "../models/networkModel";
+import { getIPFSJSON } from "./metadataController";
 
 export const getTokenURI = expressAsyncHandler(async (req, res) => {
     const { collection: rawAddress, tokenId } = req.query;
@@ -29,21 +30,28 @@ export const getTokenURI = expressAsyncHandler(async (req, res) => {
     }
 
     // get tokenURI from DB NFT document => DB Collection document
-    const getURIFallback = () => {
+    const getURIFallback = async () => {
         if (nft.tokenURI) {
-            return nft.tokenURI
+            const content = await getIPFSJSON(nft.tokenURI);
+            const extSting = collectionDoc.protocol === Protocol.ERC721 ? content.ext as string : "";
+            return {
+                ...content,
+                mediaURI: `${process.env.PINATA_GATEWAY!}${content.mediaCID}${extSting}`
+            }
         }
 
         // need to delete the previewImage after reveal
         if (collectionDoc.previewImage) {
-            return collectionDoc.previewImage;
+            return {
+                mediaURI: collectionDoc.previewImage
+            }
         }
 
-        return "";
+        return { mediaURI: "" };
     }
 
-    const tokenURI = getURIFallback();
-    res.status(200).json({ collection: address, tokenId, tokenURI });
+    const tokenURI = await getURIFallback();
+    res.status(200).json(tokenURI);
 })
 
 export const getNFTList = expressAsyncHandler(async (req, res) => {

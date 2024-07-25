@@ -7,9 +7,11 @@ import Network from "../models/networkModel";
 import TransactionHashCache from "../util/transactionHash";
 import logger from "../util/logger";
 import { retry } from "../util/retry";
+import { createGroup, CreateGroupRes } from "../controller/metadataController";
 
 export const findOrCreateCollection = async (address: string, contract: Collection721 | Collection1155, networkId: number | string, protocol: Protocol) => {
-    const collection = await Collection.findOne({ address });
+    const network = await Network.findOne({ networkId });
+    const collection = await Collection.findOne({ address, deployedAt: network?._id });
 
     if (collection) {
         return collection;
@@ -26,13 +28,21 @@ export const findOrCreateCollection = async (address: string, contract: Collecti
 
     const [owner, name, symbol, logoURI, isBase] = await Promise.all(promiseList);
 
-    const user = await findOrCreateUser(owner as string);
+    const secondPromiseList: Promise<any>[] = [
+        findOrCreateUser(owner as string),
+        getBlockNumber(Number(networkId)),
+    ]
 
-    const network = await Network.findOne({ networkId });
+    if (isBase) {
+        secondPromiseList.push(createGroup(address as string))
+    }
 
-    const block = await getBlockNumber(Number(networkId));
+    const results = await Promise.all(secondPromiseList);
 
-    return await Collection.create({
+    const [user, block] = results;
+    const createGroupRes = isBase ? (results[2] as CreateGroupRes) : undefined;
+
+    const collectionDoc = await Collection.create({
         address,
         owner: user,
         logoURI,
@@ -41,10 +51,13 @@ export const findOrCreateCollection = async (address: string, contract: Collecti
         isBase,
         networks: [],
         deployedAt: network,
-        lastFilterBlock: block - 10,
+        lastFilterBlock: (block as number) - 10,
         protocol,
         airdrops: [],
-    })
+        ipfsGroupId: isBase ? createGroupRes?.id : undefined, // Conditionally add ipfsGroupId
+    });
+
+    return collectionDoc;
 }
 
 export const getEndBlock = (startBlock: number, currentBlock: number) => {

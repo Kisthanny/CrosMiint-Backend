@@ -118,7 +118,7 @@ export const baseURISet = async (address: string, networkId: number, baseURI: st
             filter: { _id: nft._id },
             update: {
                 $set: {
-                    tokenURI: `${baseURI}/metadata/${nft.tokenId}`,
+                    tokenURI: `${baseURI}/${nft.tokenId}`,
                     metadataType: MetadataType.Image
                 }
             }

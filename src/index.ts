@@ -12,6 +12,7 @@ import marketRouter from "./router/marketRouter";
 import onMounted from "./hooks/onMounted";
 import logRouter from "./router/logRouter";
 import listingRouter from "./router/listingRouter";
+import metadataRouter from "./router/metadataRouter";
 
 dotenv.config();
 
@@ -44,6 +45,7 @@ app.use("/api/nft", nftRouter);
 app.use("/api/market", marketRouter);
 app.use("/api/log", logRouter);
 app.use("/api/listing", listingRouter);
+app.use("/api/metadata", metadataRouter);
 
 // error handle
 app.use(notFoundHandler);
