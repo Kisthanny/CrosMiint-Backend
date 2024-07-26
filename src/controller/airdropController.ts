@@ -1,12 +1,13 @@
 import expressAsyncHandler from "express-async-handler";
-import Collection, { Protocol, Category } from "../models/collectionModel";
-import { formatDocument } from "../util/responseFormatter";
+import Collection from "../models/collectionModel";
+import { formatDocument, formatLikes } from "../util/responseFormatter";
 import Airdrop from "../models/airdropModel";
 import Network from "../models/networkModel";
+import { ValidatedRequest } from "../middleware/authMiddleware";
 const AIRDROP_STAGES = ["upcoming", "finished"];
 type StageType = "upcoming" | "finished";
 
-export const getAirdropList = expressAsyncHandler(async (req, res) => {
+export const getAirdropList = expressAsyncHandler(async (req: ValidatedRequest, res) => {
     const { address: rawAddress, networkId, stage, pageNum = 1, pageSize = 10 } = req.query;
 
     const limit = parseInt(pageSize as string, 10);
@@ -69,7 +70,7 @@ export const getAirdropList = expressAsyncHandler(async (req, res) => {
     const pages = Math.ceil(total / limit);
 
     res.status(200).json({
-        dataList: formatDocument(airdrops),
+        dataList: formatLikes(formatDocument(airdrops), req.user),
         total,
         page,
         pages,
@@ -122,3 +123,62 @@ export const getAirdropInfo = expressAsyncHandler(async (req, res) => {
 
     res.status(200).json(formatDocument(airdrop));
 })
+
+export const likeAirdrop = expressAsyncHandler(async (req: ValidatedRequest, res) => {
+    const { airdropId } = req.body;
+    const user = req.user;
+    if (!user) {
+        res.status(401);
+        throw new Error("Unauthorized");
+    }
+
+    const userId = user._id as string;
+
+    const airdrop = await Airdrop.findById(airdropId);
+    if (!airdrop) {
+        res.status(404);
+        throw new Error("Airdrop not found");
+    }
+
+    // 检查用户是否已经点赞
+    if (airdrop.likes.includes(userId)) {
+        res.status(400);
+        throw new Error("User already liked this airdrop");
+    }
+
+    // 添加用户ID到点赞列表
+    airdrop.likes.push(userId);
+    await airdrop.save();
+
+    res.status(200).json({ message: "Airdrop liked successfully", success: true });
+});
+
+export const unlikeAirdrop = expressAsyncHandler(async (req: ValidatedRequest, res) => {
+    const { airdropId } = req.body;
+    const user = req.user;
+    if (!user) {
+        res.status(401);
+        throw new Error("Unauthorized");
+    }
+
+    const userId = user._id as string;
+
+    const airdrop = await Airdrop.findById(airdropId);
+    if (!airdrop) {
+        res.status(404);
+        throw new Error("Airdrop not found");
+    }
+
+    // 检查用户是否点赞
+    const index = airdrop.likes.indexOf(userId);
+    if (index === -1) {
+        res.status(400);
+        throw new Error("User has not liked this airdrop");
+    }
+
+    // 从点赞列表中移除用户ID
+    airdrop.likes.splice(index, 1);
+    await airdrop.save();
+
+    res.status(200).json({ message: "Airdrop unliked successfully", success: true });
+});

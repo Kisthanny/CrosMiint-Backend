@@ -51,6 +51,7 @@ export const dropCreated = async (
         whiteListEndTime: blockTimeToDate(whiteListEndTime),
         whiteListPrice: whiteListPrice.toString(),
         mintLimitPerWallet: mintLimitPerWallet.toString(),
+        likes: [],
     })
 
     collection.airdrops.push(airdrop);

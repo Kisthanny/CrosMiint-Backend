@@ -39,6 +39,33 @@ export const protect = expressAsyncHandler(async (req: ValidatedRequest, res: Re
     }
 });
 
+// for interface that do not require but could accept authentication
+export const halfAuth = expressAsyncHandler(async (req: ValidatedRequest, res: Response, next: NextFunction) => {
+    let token: string = "";
+
+    if (req.headers.authorization?.startsWith("Bearer")) {
+        try {
+            token = req.headers.authorization.split(" ")[1];
+
+            const decoded = verify(token, process.env.JWT_SECRET!) as JwtPayload;
+
+            const user = await User.findById(decoded.id);
+
+            if (!user) {
+                throw new Error("Not Authorized, user not found");
+            }
+
+            req.user = user; // 设置 req.user
+
+            next();
+        } catch (error) {
+            next();
+        }
+    } else {
+        next();
+    }
+});
+
 export const signatureVerificationMiddleware = expressAsyncHandler(async (req: ValidatedRequest, res, next) => {
     try {
         const { signature, address } = req.body;

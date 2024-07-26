@@ -1,9 +1,10 @@
 import mongoose, { Document, Schema } from "mongoose";
 import { ICollection } from "./collectionModel";
+import { IUser } from "./userModel";
 
 // 定义 IAirdrop 接口
 export interface IAirdrop extends Document {
-    fromCollection: ICollection['_id'],
+    fromCollection: ICollection['_id'];
     dropIndex: string;
     supply: string;
     minted: string;
@@ -16,6 +17,7 @@ export interface IAirdrop extends Document {
     mintLimitPerWallet?: string;
     createdAt: Date;
     updatedAt: Date;
+    likes: IUser["_id"][];  // 保存点赞用户的ID列表
 }
 
 // 创建 airdropSchema
@@ -32,6 +34,7 @@ const airdropSchema: Schema<IAirdrop> = new mongoose.Schema(
         whiteListEndTime: { type: Date, required: false },
         whiteListPrice: { type: String, required: false },
         mintLimitPerWallet: { type: String, required: false },
+        likes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }]  // 保存点赞用户的ID列表
     },
     {
         timestamps: true,

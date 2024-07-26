@@ -1,10 +1,15 @@
 import { Router } from "express";
-import { getAirdropInfo, getAirdropList } from "../controller/airdropController";
+import { getAirdropInfo, getAirdropList, likeAirdrop, unlikeAirdrop } from "../controller/airdropController";
+import { halfAuth, protect } from "../middleware/authMiddleware";
 
 const airdropRouter = Router();
 
-airdropRouter.get("/getAirdropList", getAirdropList);
+airdropRouter.get("/getAirdropList", halfAuth, getAirdropList);
 
 airdropRouter.get("/getAirdropInfo", getAirdropInfo);
+
+airdropRouter.post("/likeAirdrop", protect, likeAirdrop);
+
+airdropRouter.post("/unlikeAirdrop", protect, unlikeAirdrop);
 
 export default airdropRouter;
