@@ -262,7 +262,7 @@ export const uploadCSV = expressAsyncHandler(async (req: ValidatedRequest, res, 
 
             const jsonData: JsonMetadata = {
                 ipfsHash: parsedImageHashes[fileName],
-                mimetype: path.extname(fileName),
+                mimetype: file.mimetype,
                 ext: path.extname(fileName),
                 name: row.name,
                 description: row.description,

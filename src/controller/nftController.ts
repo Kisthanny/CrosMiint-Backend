@@ -33,10 +33,9 @@ export const getTokenURI = expressAsyncHandler(async (req, res) => {
     const getURIFallback = async () => {
         if (nft.tokenURI) {
             const content = await getIPFSJSON(nft.tokenURI);
-            const extSting = collectionDoc.protocol === Protocol.ERC721 ? content.ext as string : "";
             return {
                 ...content,
-                mediaURI: `${process.env.PINATA_GATEWAY!}${content.mediaCID}${extSting}`
+                mediaURI: `${process.env.PINATA_GATEWAY!}${content.ipfsHash}`
             }
         }
 
