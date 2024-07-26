@@ -45,7 +45,7 @@ export const findOrCreateCollection = async (address: string, contract: Collecti
     const collectionDoc = await Collection.create({
         address,
         owner: user,
-        logoURI,
+        logoURI: `${process.env.PINATA_GATEWAY!}${logoURI}`,
         name,
         symbol,
         isBase,

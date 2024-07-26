@@ -13,6 +13,7 @@ import logRouter from "./router/logRouter";
 import listingRouter from "./router/listingRouter";
 import metadataRouter from "./router/metadataRouter";
 import transactionRouter from "./router/transactionRouter";
+import homePageRouter from "./router/homePageRouter";
 
 dotenv.config();
 
@@ -47,6 +48,7 @@ app.use("/api/log", logRouter);
 app.use("/api/listing", listingRouter);
 app.use("/api/metadata", metadataRouter);
 app.use("/api/transaction", transactionRouter);
+app.use("/api/homePage", homePageRouter);
 
 // error handle
 app.use(notFoundHandler);

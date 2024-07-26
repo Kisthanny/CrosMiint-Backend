@@ -154,7 +154,7 @@ export const updateCategory = expressAsyncHandler(async (req: ValidatedRequest, 
 })
 
 export const updatePreviewImage = expressAsyncHandler(async (req: ValidatedRequest, res) => {
-    const { address: rawAddress, previewImage } = req.body;
+    const { address: rawAddress, ipfsHash } = req.body;
 
     const address = (rawAddress as string).toLocaleLowerCase();
 
@@ -169,7 +169,7 @@ export const updatePreviewImage = expressAsyncHandler(async (req: ValidatedReque
         throw new Error("Unauthorized");
     }
 
-    collection.previewImage = previewImage;
+    collection.previewImage = `${process.env.PINATA_GATEWAY!}${ipfsHash}`;
     await collection.save();
 
     res.status(200).json(formatDocument(collection));

@@ -29,6 +29,7 @@ export const formatLikes = (docs: any | any[], user?: IUser) => {
             const userId = String(user?._id)
             const likes = doc.likes.map((id: any) => String(id));
             const isLiked = likes.includes(userId)
+            console.log({ userId, likes, isLiked })
             duplica.isLiked = isLiked;
             delete duplica.likes
         }

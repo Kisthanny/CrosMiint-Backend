@@ -70,7 +70,7 @@ export const updateUser = expressAsyncHandler(async (req: ValidatedRequest, res)
     }
 
     user.name = name || user.name;
-    user.avatar = avatar || user.avatar;
+    user.avatar = `${process.env.PINATA_GATEWAY!}${avatar}` || user.avatar;
     user.bio = bio || user.bio;
     user.email = email || user.email;
     user.facebook = facebook || user.facebook;
