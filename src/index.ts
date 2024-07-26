@@ -9,10 +9,10 @@ import collectionRouter from "./router/collectionRouter";
 import airdropRouter from "./router/airdropRouter";
 import nftRouter from "./router/nftRouter";
 import marketRouter from "./router/marketRouter";
-import onMounted from "./hooks/onMounted";
 import logRouter from "./router/logRouter";
 import listingRouter from "./router/listingRouter";
 import metadataRouter from "./router/metadataRouter";
+import transactionRouter from "./router/transactionRouter";
 
 dotenv.config();
 
@@ -46,6 +46,7 @@ app.use("/api/market", marketRouter);
 app.use("/api/log", logRouter);
 app.use("/api/listing", listingRouter);
 app.use("/api/metadata", metadataRouter);
+app.use("/api/transaction", transactionRouter);
 
 // error handle
 app.use(notFoundHandler);

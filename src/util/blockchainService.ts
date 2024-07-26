@@ -99,3 +99,22 @@ export const convertAddress = (hexAddress: string, isContract: boolean = false) 
 
     return `0x${address.padStart(64, "0")}`;
 }
+
+export const getTransaction = async (transactionHash: string, networkId: number) => {
+    const provider = getProvider(networkId);
+    return await provider.getTransaction(transactionHash);
+}
+
+export const getReceipt = async (transactionHash: string, networkId: number) => {
+    const provider = getProvider(networkId);
+    return await provider.getTransactionReceipt(transactionHash);
+}
+
+export const stringifyWithBigInt = (obj: any) => {
+    return JSON.stringify(obj, (key, value) => typeof value === 'bigint' ? value.toString() : value);
+}
+
+export const convertObjWithBigInt = (obj: any) => {
+    const jsonString = stringifyWithBigInt(obj);
+    return JSON.parse(jsonString);
+}
