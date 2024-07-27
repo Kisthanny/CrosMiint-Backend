@@ -4,14 +4,12 @@ import { IAirdrop } from "./airdropModel";
 // 定义 IHomePage 接口
 export interface IHomePage extends Document {
     heroImage: string;
-    top5AirdropList: IAirdrop['_id'][];
 }
 
 // 创建 homePageSchema
 const homePageSchema: Schema<IHomePage> = new mongoose.Schema(
     {
         heroImage: { type: String, trim: true, required: true },
-        top5AirdropList: [{ type: mongoose.Schema.Types.ObjectId, ref: "Airdrop", required: true }]
     },
     {
         timestamps: false,

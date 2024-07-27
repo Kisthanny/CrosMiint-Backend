@@ -21,7 +21,7 @@ export const formatDocument = (docs: Document | Document[]) => {
 };
 
 // convert all likes array to likeCount: number and isLiked: boolean
-export const formatLikes = (docs: any | any[], user?: IUser) => {
+export const formatLikes = (docs: any | any[], user: IUser | undefined) => {
     const formatSingleDocument = (doc: any) => {
         const duplica = { ...doc };
         if (Array.isArray(doc.likes)) {
@@ -29,7 +29,6 @@ export const formatLikes = (docs: any | any[], user?: IUser) => {
             const userId = String(user?._id)
             const likes = doc.likes.map((id: any) => String(id));
             const isLiked = likes.includes(userId)
-            console.log({ userId, likes, isLiked })
             duplica.isLiked = isLiked;
             delete duplica.likes
         }
