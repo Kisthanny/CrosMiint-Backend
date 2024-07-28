@@ -7,6 +7,7 @@ import User from "../models/userModel";
 import { formatDocument } from "../util/responseFormatter";
 import startPolling721 from "../filter/collection721Filter";
 import startPolling1155 from "../filter/collection1155Filter";
+import { getBlockNumber } from "../util/blockchainService";
 
 export const createCollection = expressAsyncHandler(async (req: ValidatedRequest, res) => {
     const { address: rawAddress, protocol, deployedAt } = req.body;
@@ -173,4 +174,32 @@ export const updatePreviewImage = expressAsyncHandler(async (req: ValidatedReque
     await collection.save();
 
     res.status(200).json(formatDocument(collection));
+})
+
+export const allCollectionUpToDate = expressAsyncHandler(async (req, res, next) => {
+    const collections = await Collection.find({});
+
+    const networks = await Network.find({});
+    const blockNumberMap: { [key: string]: number } = {};
+    const promiseList = networks.map(async (network) => {
+        const blockNumber = await getBlockNumber(network.networkId)
+        return { [network._id as string]: blockNumber };
+    })
+    const result = await Promise.all(promiseList);
+    result.forEach(o => {
+        Object.assign(blockNumberMap, o);
+    })
+    const bulkOps = collections.map(collection => ({
+        updateOne: {
+            filter: { _id: collection._id },
+            update: {
+                $set: {
+                    lastFilterBlock: blockNumberMap[String(collection.deployedAt)]
+                }
+            }
+        }
+    }));
+
+    await Collection.bulkWrite(bulkOps);
+    res.status(200).json(blockNumberMap);
 })

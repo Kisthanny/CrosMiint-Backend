@@ -21,24 +21,9 @@ export const getHomePage = expressAsyncHandler(async (req: ValidatedRequest, res
         res.status(500);
         throw new Error("No HomePage Info")
     }
-    const top5AirdropList = await Airdrop.find({
-        endTime: { $gt: new Date() }  // endTime 属性时间大于当前时间
-    })
-        .sort({ likes: -1 })  // 按 likes 数组长度降序排列
-        .limit(5)
-        .populate({
-            path: 'fromCollection',
-            select: 'owner name logoURI category previewImage',
-            populate: {
-                path: 'owner',
-                select: 'name avatar'
-            }
-        })
-        .exec();
 
     res.status(200).json({
         heroImage: homePage.heroImage,
-        top5AirdropList: formatLikes(formatDocument(top5AirdropList), req.user),
     });
 })
 

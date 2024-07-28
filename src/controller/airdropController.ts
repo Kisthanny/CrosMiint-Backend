@@ -182,3 +182,30 @@ export const unlikeAirdrop = expressAsyncHandler(async (req: ValidatedRequest, r
 
     res.status(200).json({ message: "Airdrop unliked successfully", success: true });
 });
+
+export const getTop5AirdropList = expressAsyncHandler(async (req: ValidatedRequest, res, next) => {
+    const top5AirdropList = await Airdrop.find({
+        endTime: { $gt: new Date() }  // endTime 属性时间大于当前时间
+    })
+        .sort({ likes: -1 })  // 按 likes 数组长度降序排列
+        .limit(5)
+        .populate({
+            path: 'fromCollection',
+            select: 'owner name logoURI category previewImage deployedAt',
+            populate: [
+                {
+                    path: 'owner',
+                    select: 'name avatar'
+                },
+                {
+                    path: "deployedAt",
+                    select: "networkId nativeCurrency"
+                }
+            ]
+        })
+        .exec();
+
+    res.status(200).json({
+        dataList: formatLikes(formatDocument(top5AirdropList), req.user),
+    });
+})
