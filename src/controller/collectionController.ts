@@ -2,12 +2,13 @@ import expressAsyncHandler from "express-async-handler";
 import { ethers } from "ethers";
 import Network from "../models/networkModel";
 import { ValidatedRequest } from "../middleware/authMiddleware";
-import Collection, { Protocol, Category } from "../models/collectionModel";
+import Collection, { Protocol, Category as CategoryType } from "../models/collectionModel";
 import User from "../models/userModel";
 import { formatDocument } from "../util/responseFormatter";
 import startPolling721 from "../filter/collection721Filter";
 import startPolling1155 from "../filter/collection1155Filter";
 import { getBlockNumber } from "../util/blockchainService";
+import Category from "../models/categoryModel";
 
 export const createCollection = expressAsyncHandler(async (req: ValidatedRequest, res) => {
     const { address: rawAddress, protocol, deployedAt } = req.body;
@@ -143,7 +144,7 @@ export const updateCategory = expressAsyncHandler(async (req: ValidatedRequest, 
         throw new Error("Unauthorized");
     }
 
-    if (!Object.values(Category).includes(category)) {
+    if (!Object.values(CategoryType).includes(category)) {
         res.status(400);
         throw new Error(`Category ${category} does not exist`);
     }
@@ -202,4 +203,33 @@ export const allCollectionUpToDate = expressAsyncHandler(async (req, res, next) 
 
     await Collection.bulkWrite(bulkOps);
     res.status(200).json(blockNumberMap);
+})
+
+export const createCategory = expressAsyncHandler(async (req, res, next) => {
+    const { categoryList } = req.body;
+
+    if (!Array.isArray(categoryList)) {
+        res.status(400);
+        throw new Error("Expecting categoryList to be Array");
+    }
+
+    const valid = categoryList.every(category => category.name && category.image);
+    if (!valid) {
+        res.status(400);
+        throw new Error("invalid category");
+    }
+    const categoryDocs = categoryList.map(category => new Category({
+        name: category.name,
+        image: `${process.env.PINATA_GATEWAY!}${category.image}`,
+    }))
+
+    const result = await Category.bulkSave(categoryDocs);
+
+    res.status(200).json({ result });
+})
+
+export const getCategoryList = expressAsyncHandler(async (req, res, next) => {
+    const categoryList = await Category.find({});
+
+    res.status(200).json({ dataList: formatDocument(categoryList) })
 })

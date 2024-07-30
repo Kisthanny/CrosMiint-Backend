@@ -184,28 +184,55 @@ export const unlikeAirdrop = expressAsyncHandler(async (req: ValidatedRequest, r
 });
 
 export const getTop5AirdropList = expressAsyncHandler(async (req: ValidatedRequest, res, next) => {
-    const top5AirdropList = await Airdrop.find({
-        endTime: { $gt: new Date() }  // endTime 属性时间大于当前时间
-    })
-        .sort({ likes: -1 })  // 按 likes 数组长度降序排列
-        .limit(5)
-        .populate({
-            path: 'fromCollection',
-            select: 'owner name logoURI category previewImage deployedAt',
-            populate: [
-                {
-                    path: 'owner',
-                    select: 'name avatar'
-                },
-                {
-                    path: "deployedAt",
-                    select: "networkId nativeCurrency"
-                }
-            ]
-        })
-        .exec();
+    const airdrops = await Airdrop.aggregate([
+        {
+            $project: {
+                fromCollection: 1,
+                dropIndex: 1,
+                supply: 1,
+                minted: 1,
+                startTime: 1,
+                endTime: 1,
+                price: 1,
+                hasWhiteListPhase: 1,
+                whiteListEndTime: 1,
+                whiteListPrice: 1,
+                mintLimitPerWallet: 1,
+                likes: 1,
+                likesCount: { $size: '$likes' }, // 计算 likes 数组的大小  
+            },
+        },
+        {
+            $match: {
+                endTime: { $gt: new Date() }
+            }
+        },
+        {
+            $sort: { likesCount: -1 }, // 按照 likesCount 降序排序  
+        },
+        {
+            $limit: 5 // 限制结果只返回前五个  
+        }
+    ]);
+
+    const promiseList = airdrops.map(e => (Airdrop.findById(e._id).populate({
+        path: 'fromCollection',
+        select: 'owner name logoURI category previewImage deployedAt address',
+        populate: [
+            {
+                path: 'owner',
+                select: 'name avatar'
+            },
+            {
+                path: "deployedAt",
+                select: "networkId nativeCurrency chainId"
+            }
+        ]
+    })))
+
+    const top5AirdropList = await Promise.all(promiseList);
 
     res.status(200).json({
-        dataList: formatLikes(formatDocument(top5AirdropList), req.user),
+        dataList: formatLikes(formatDocument(top5AirdropList.filter(e => e !== null)), req.user),
     });
 })

@@ -35,7 +35,7 @@ export const protect = expressAsyncHandler(async (req: ValidatedRequest, res: Re
         }
     } else {
         res.status(401);
-        throw new Error("Not Authorized, no token");
+        throw new Error("Please Connect Your Wallet First");
     }
 });
 
