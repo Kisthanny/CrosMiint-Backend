@@ -103,3 +103,36 @@ export const updateUserAccess = expressAsyncHandler(async (req, res) => {
         role: updatedUser.role,
     });
 })
+
+export const updateProfileCover = expressAsyncHandler(async (req: ValidatedRequest, res) => {
+    const { ipfsHash } = req.body;
+    const user = req.user;
+    if (!user) {
+        res.status(401);
+        throw new Error("Please Connect Your Wallet First")
+    };
+
+    const userDoc = await User.findById(user.id);
+    if (!userDoc) {
+        res.status(404);
+        throw new Error("User Not Found");
+    }
+
+    userDoc.profileCover = `${process.env.PINATA_GATEWAY!}${ipfsHash}`;
+    await userDoc.save();
+
+    res.status(200).json(formatDocument(userDoc));
+})
+
+export const getUserInfo = expressAsyncHandler(async (req, res) => {
+    const { id } = req.query;
+
+    const userDoc = await User.findById(id);
+
+    if (!userDoc) {
+        res.status(404);
+        throw new Error("User Not Found");
+    }
+
+    res.status(200).json(formatDocument(userDoc));
+})

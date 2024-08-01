@@ -16,6 +16,7 @@ export interface IUser extends Document {
     facebook?: string;
     twitter?: string;
     instagram?: string;
+    profileCover?: string;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -32,6 +33,7 @@ const userSchema: Schema<IUser> = new mongoose.Schema(
         facebook: { type: String, trim: true, unique: false, required: false },
         twitter: { type: String, trim: true, unique: false, required: false },
         instagram: { type: String, trim: true, unique: false, required: false },
+        profileCover: { type: String, trim: true, unique: false, required: false },
     },
     {
         timestamps: true,
