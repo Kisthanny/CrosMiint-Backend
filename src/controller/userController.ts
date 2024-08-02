@@ -61,7 +61,7 @@ export const authUser = expressAsyncHandler(async (req: ValidatedRequest, res) =
 });
 
 export const updateUser = expressAsyncHandler(async (req: ValidatedRequest, res) => {
-    const { name, avatar, bio, email, facebook, twitter, instagram } = req.body;
+    const { name, bio, email, facebook, twitter, instagram } = req.body;
 
     const user = req.user;
     if (!user) {
@@ -70,7 +70,6 @@ export const updateUser = expressAsyncHandler(async (req: ValidatedRequest, res)
     }
 
     user.name = name || user.name;
-    user.avatar = `${process.env.PINATA_GATEWAY!}${avatar}` || user.avatar;
     user.bio = bio || user.bio;
     user.email = email || user.email;
     user.facebook = facebook || user.facebook;
@@ -133,6 +132,26 @@ export const getUserInfo = expressAsyncHandler(async (req, res) => {
         res.status(404);
         throw new Error("User Not Found");
     }
+
+    res.status(200).json(formatDocument(userDoc));
+})
+
+export const updateProfileAvatar = expressAsyncHandler(async (req:ValidatedRequest, res) => {
+    const { ipfsHash } = req.body;
+    const user = req.user;
+    if (!user) {
+        res.status(401);
+        throw new Error("Please Connect Your Wallet First")
+    };
+
+    const userDoc = await User.findById(user.id);
+    if (!userDoc) {
+        res.status(404);
+        throw new Error("User Not Found");
+    }
+
+    userDoc.avatar = `${process.env.PINATA_GATEWAY!}${ipfsHash}`;
+    await userDoc.save();
 
     res.status(200).json(formatDocument(userDoc));
 })
