@@ -39,13 +39,6 @@ export const getTokenURI = expressAsyncHandler(async (req, res) => {
             }
         }
 
-        // need to delete the previewImage after reveal
-        if (collectionDoc.previewImage) {
-            return {
-                mediaURI: collectionDoc.previewImage
-            }
-        }
-
         return { mediaURI: "" };
     }
 
@@ -142,7 +135,7 @@ export const getNFTInfo = expressAsyncHandler(async (req, res) => {
     })
         .populate({
             path: "fromCollection",
-            select: "address owner logoURI name deployedAt previewImage protocol category",
+            select: "address owner logoURI name deployedAt previewImages protocol category",
             populate: [
                 {
                     path: "owner",

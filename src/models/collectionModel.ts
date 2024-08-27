@@ -2,6 +2,7 @@ import mongoose, { Document, Schema } from "mongoose";
 import { IUser } from "./userModel";
 import { IAirdrop } from "./airdropModel";
 import { INetwork } from "./networkModel";
+import { IOverview } from "./overviewModel";
 
 export enum Protocol {
     ERC721 = 'ERC-721',
@@ -29,11 +30,14 @@ export interface ICollection extends Document {
     isBase: boolean;
     category?: Category;
     airdrops: IAirdrop['_id'][];
-    previewImage?: string;
+    previewImages?: string[];
     networks: { networkId: number; networkCollection: string }[];
     baseURI?: string;
     lastFilterBlock: number;
     ipfsGroupId?: string;
+    description?: string;
+    bannerImageSrc?: string;
+    overviews?: IOverview["_id"][];
     createdAt: Date;
     updatedAt: Date;
 }
@@ -51,7 +55,7 @@ const collectionSchema: Schema<ICollection> = new mongoose.Schema(
         airdrops: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Airdrop' }],
         deployedAt: { type: mongoose.Schema.Types.ObjectId, ref: 'Network', required: true },
         isBase: { type: Boolean, required: true },
-        previewImage: { type: String, required: false },
+        previewImages: [{ type: String, required: false }],
         networks: {
             type: [{
                 networkId: { type: Number, required: true },
@@ -68,11 +72,21 @@ const collectionSchema: Schema<ICollection> = new mongoose.Schema(
         baseURI: { type: String, trim: true, required: false },
         lastFilterBlock: { type: Number, required: true },
         ipfsGroupId: { type: String, required: false, },
+        description: { type: String, required: false },
+        bannerImageSrc: { type: String, required: false },
+        overviews: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Overview' }],
     },
     {
         timestamps: true,
     }
 );
+
+collectionSchema.pre('validate', function (next) {
+    if (this.previewImages && this.previewImages.length > 5) {
+        return next(new Error('previewImages array must not exceed 5 items.'));
+    }
+    next();
+});
 
 // 创建并导出 Collection 模型
 const Collection = mongoose.model<ICollection>("Collection", collectionSchema);

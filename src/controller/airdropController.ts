@@ -54,7 +54,7 @@ export const getAirdropList = expressAsyncHandler(async (req: ValidatedRequest, 
         .sort({ createdAt: -1 })
         .populate({
             path: "fromCollection",
-            select: "address owner logoURI name deployedAt previewImage",
+            select: "address owner logoURI name deployedAt previewImages",
             populate: [
                 {
                     path: "owner",
@@ -103,7 +103,7 @@ export const getAirdropInfo = expressAsyncHandler(async (req, res) => {
     })
         .populate({
             path: "fromCollection",
-            select: "address owner logoURI name deployedAt previewImage",
+            select: "address owner logoURI name deployedAt previewImages",
             populate: [
                 {
                     path: "owner",
@@ -217,7 +217,7 @@ export const getTop5AirdropList = expressAsyncHandler(async (req: ValidatedReque
 
     const promiseList = airdrops.map(e => (Airdrop.findById(e._id).populate({
         path: 'fromCollection',
-        select: 'owner name logoURI category previewImage deployedAt address',
+        select: 'owner name logoURI category previewImages deployedAt address',
         populate: [
             {
                 path: 'owner',

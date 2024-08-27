@@ -9,6 +9,7 @@ import startPolling721 from "../filter/collection721Filter";
 import startPolling1155 from "../filter/collection1155Filter";
 import { getBlockNumber } from "../util/blockchainService";
 import Category from "../models/categoryModel";
+import Overview from "../models/overviewModel";
 
 export const createCollection = expressAsyncHandler(async (req: ValidatedRequest, res) => {
     const { address: rawAddress, protocol, deployedAt } = req.body;
@@ -102,77 +103,107 @@ export const getCollections = expressAsyncHandler(async (req, res) => {
 })
 
 export const getCollectionInfo = expressAsyncHandler(async (req, res) => {
-    const { address, networkId } = req.query;
-    if (!address || !networkId) {
+    const { id } = req.query;
+    if (!id) {
         res.status(400);
         throw new Error("missing argument");
     }
 
-    const network = await Network.findOne({ networkId });
-    if (!network) {
-        res.status(400);
-        throw new Error(`Invalid Network ${networkId}`);
-    }
-
-    const collection = await Collection.findOne({
-        address: (address as string).toLowerCase(),
-        deployedAt: network._id,
-    })
+    const collection = await Collection.findById(id)
         .populate("owner", "address name avatar")
         .populate("deployedAt", "networkId chainName")
+        .populate("overviews")
     if (!collection) {
         res.status(400);
-        throw new Error(`Invalid Collection ${address} in Network ${networkId}`);
+        throw new Error(`Collection does not exist`);
     }
 
     res.status(200).json(formatDocument(collection));
 })
 
-export const updateCategory = expressAsyncHandler(async (req: ValidatedRequest, res) => {
-    const { address: rawAddress, category } = req.body;
+export const updateCollection = expressAsyncHandler(async (req: ValidatedRequest, res) => {
+    const {
+        id,
+        bannerImageSrc,
+        logoURI,
+        category,
+        previewImages,
+        description,
+        overviews,
+    } = req.body;
 
-    const address = (rawAddress as string).toLocaleLowerCase();
+    if (!id) {
+        res.status(400);
+        throw new Error("missing argument");
+    }
 
-    const collection = await Collection.findOne({ address });
+    const collection = await Collection.findById(id);
     if (!collection) {
         res.status(400);
-        throw new Error(`Collection ${address} does not exist`);
+        throw new Error(`Collection does not exist`);
     }
 
     if (String(collection.owner) !== String(req.user?._id)) {
-        res.status(401);
-        throw new Error("Unauthorized");
+        res.status(403);
+        throw new Error("Forbidden");
     }
 
-    if (!Object.values(CategoryType).includes(category)) {
-        res.status(400);
-        throw new Error(`Category ${category} does not exist`);
+    if (category !== undefined) {
+        if (!Object.values(CategoryType).includes(category)) {
+            res.status(400);
+            throw new Error(`Category ${category} does not exist`);
+        }
+        collection.category = category;
     }
 
-    collection.category = category;
+    if (logoURI !== undefined) {
+        collection.logoURI = logoURI;
+    }
+
+    if (bannerImageSrc !== undefined) {
+        collection.bannerImageSrc = bannerImageSrc;
+    }
+
+    if (Array.isArray(previewImages)) {
+        collection.previewImages = previewImages
+    }
+
+    if (description !== undefined) {
+        collection.description = description;
+    }
+
+    if (overviews && Array.isArray(overviews)) {
+        const promiseList = overviews.map(async overview => {
+            if (overview.id) {
+                const id = overview.id;
+                delete overview.id;
+                const overviewDoc = await Overview.findByIdAndUpdate(id, overview);
+                return overviewDoc?._id;
+            } else {
+                const overviewDoc = await Overview.create(overview);
+                return overviewDoc._id
+            }
+        })
+
+        const overviewIds = await Promise.all(promiseList);
+        collection.overviews = overviewIds;
+    }
+
     await collection.save();
 
-    res.status(200).json(formatDocument(collection));
-})
-
-export const updatePreviewImage = expressAsyncHandler(async (req: ValidatedRequest, res) => {
-    const { address: rawAddress, ipfsHash } = req.body;
-
-    const address = (rawAddress as string).toLocaleLowerCase();
-
-    const collection = await Collection.findOne({ address });
-    if (!collection) {
-        res.status(400);
-        throw new Error(`Collection ${address} does not exist`);
-    }
-
-    if (String(collection.owner) !== String(req.user?._id)) {
-        res.status(401);
-        throw new Error("Unauthorized");
-    }
-
-    collection.previewImage = `${process.env.PINATA_GATEWAY!}${ipfsHash}`;
-    await collection.save();
+    await collection.populate([
+        {
+            path: "owner",
+            select: "address name avatar"
+        },
+        {
+            path: "deployedAt",
+            select: "networkId chainName"
+        },
+        {
+            path: "overviews"
+        }
+    ])
 
     res.status(200).json(formatDocument(collection));
 })

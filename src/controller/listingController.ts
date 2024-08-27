@@ -147,7 +147,7 @@ export const getListingInfo = expressAsyncHandler(async (req, res) => {
             populate: [
                 {
                     path: "fromCollection",
-                    select: "address previewImage name symbol",
+                    select: "address previewImages name symbol",
                 }
             ]
         })
